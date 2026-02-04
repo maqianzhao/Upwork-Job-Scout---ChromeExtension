@@ -44,5 +44,7 @@ npm test
 - 自动导出：DONE/STOPPED 时导出 CSV/MD/log.json（下载 ID 作为成功标准）
 - 已增强首屏容错：页面初始无列表项时会短暂等待异步加载，避免误报 `LIST_NO_ITEMS_FOUND`
 - 下载目录默认在浏览器下载目录下的 `UpworkJobScout/` 子目录（例如 `Downloads/UpworkJobScout/`）
+- 点击 `Download Log` 时会弹出浏览器“另存为”对话框，可手动选择日志保存路径
+- 已修复 Service Worker 下载兼容问题（不再依赖 `URL.createObjectURL`）
 
 详细规范请查看：`PRD-browser-extension-v0.4.md`

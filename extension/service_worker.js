@@ -8,11 +8,10 @@ const storageSet = (obj) =>
   new Promise((resolve) => chrome.storage.local.set(obj, resolve));
 const DOWNLOAD_DIR = "UpworkJobScout";
 
-async function downloadText(filename, content, mime) {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
+async function downloadText(filename, content, mime, saveAs = false) {
+  const url = buildDataUrl(content, mime);
   const downloadId = await new Promise((resolve, reject) => {
-    chrome.downloads.download({ url, filename, saveAs: false }, (id) => {
+    chrome.downloads.download({ url, filename, saveAs }, (id) => {
       if (chrome.runtime.lastError || !id) {
         reject(new Error(chrome.runtime.lastError?.message || "download failed"));
         return;
@@ -21,6 +20,18 @@ async function downloadText(filename, content, mime) {
     });
   });
   return downloadId;
+}
+
+function buildDataUrl(content, mime) {
+  const bytes = new TextEncoder().encode(content);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  const b64 = btoa(binary);
+  return `data:${mime};base64,${b64}`;
 }
 
 async function exportAll(runId) {
@@ -105,12 +116,16 @@ async function exportOne(runId, type) {
       events: [],
       summary: { download_ids: { csv: null, md: null, log: null } },
     });
+    const filename = `${DOWNLOAD_DIR}/${meta.run_id || runId}.log.json`;
     await downloadText(
-      `${DOWNLOAD_DIR}/${meta.run_id || runId}.log.json`,
+      filename,
       JSON.stringify(logJson, null, 2),
-      "application/json;charset=utf-8"
+      "application/json;charset=utf-8",
+      true
     );
+    return { filename };
   }
+  return {};
 }
 
 async function finalizeExport(metaKey, meta, downloadIds) {
@@ -140,7 +155,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       } else if (msg?.type === "EXPORT_MD") {
         await exportOne(msg.run_id, "md");
       } else if (msg?.type === "EXPORT_LOG") {
-        await exportOne(msg.run_id, "log");
+        const data = await exportOne(msg.run_id, "log");
+        sendResponse({ ok: true, download_dir: DOWNLOAD_DIR, ...data });
+        return;
       }
       sendResponse({ ok: true, download_dir: DOWNLOAD_DIR });
     } catch (err) {

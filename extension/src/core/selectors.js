@@ -9,6 +9,12 @@ function isVisible(el) {
   return style.display !== "none" && style.visibility !== "hidden";
 }
 
+function scoreContainer(el) {
+  if (!el) return 0;
+  const textLen = normalizeText(el.textContent || "").length;
+  return textLen;
+}
+
 export function findLoadMoreButton(doc) {
   const candidates = Array.from(
     doc.querySelectorAll("button, [role='button']")
@@ -32,11 +38,37 @@ export function findLoadMoreButton(doc) {
 }
 
 export function findSliderContainer(doc) {
-  const dialog = doc.querySelector('[role="dialog"]');
-  if (dialog) return { container: dialog, strategy: "S1" };
-  const modal = doc.querySelector('[aria-modal="true"]');
-  if (modal) return { container: modal, strategy: "S1" };
+  const roleCandidates = Array.from(
+    doc.querySelectorAll('[role="dialog"], [aria-modal="true"]')
+  ).filter(isVisible);
+  if (roleCandidates.length > 0) {
+    const best = roleCandidates.sort((a, b) => scoreContainer(b) - scoreContainer(a))[0];
+    return { container: best, strategy: "S1" };
+  }
+
+  const classCandidates = Array.from(
+    doc.querySelectorAll(
+      '[class*="slider"], [class*="drawer"], [class*="panel"], [class*="job-details"], [data-test*="job-details"], [data-test*="jobDetails"], [id*="job-details"]'
+    )
+  ).filter(isVisible);
+  if (classCandidates.length > 0) {
+    const best = classCandidates.sort((a, b) => scoreContainer(b) - scoreContainer(a))[0];
+    return { container: best, strategy: "S2" };
+  }
+
   return { container: null, strategy: null };
+}
+
+export function findDetailContentContainer(doc) {
+  const candidates = Array.from(
+    doc.querySelectorAll(
+      'main [data-test*="job-details"], main [class*="job-details"], main section, main article, [class*="description"]'
+    )
+  ).filter(isVisible);
+  if (candidates.length === 0) return { container: null, strategy: null };
+  const best = candidates.sort((a, b) => scoreContainer(b) - scoreContainer(a))[0];
+  if (scoreContainer(best) < 40) return { container: null, strategy: null };
+  return { container: best, strategy: "D1" };
 }
 
 export function findCloseButton(container) {

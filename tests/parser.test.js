@@ -72,6 +72,22 @@ describe("parser", () => {
     expect(detail.client_history_detail_raw).toContain("Great client");
   });
 
+  it("extracts detail description from longest section fallback", () => {
+    const html = `
+      <div class="job-details-panel">
+        <section>tiny</section>
+        <section>
+          This is a much longer description block for a job detail page.
+          It includes multiple sentences and should be chosen by parser.
+        </section>
+      </div>
+    `;
+    const dom = new JSDOM(html);
+    const slider = dom.window.document.querySelector(".job-details-panel");
+    const detail = extractDetailFromSlider(slider);
+    expect(detail.description_full).toContain("much longer description block");
+  });
+
   it("falls back to card extraction without details links", () => {
     const html = `
       <article class="job-tile">

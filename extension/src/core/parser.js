@@ -30,6 +30,15 @@ function textWithBreaks(element) {
   return normalizeText(clone.textContent || "");
 }
 
+function pickLongestText(elements) {
+  let best = "";
+  for (const el of elements) {
+    const t = textWithBreaks(el);
+    if (t.length > best.length) best = t;
+  }
+  return best || "";
+}
+
 function findTitle(container, link) {
   const linkText = normalizeText(link?.textContent || "");
   if (linkText) return linkText;
@@ -109,6 +118,7 @@ function extractCardsFallback(doc) {
     const proposals = findProposalText(container) || findFirstMatch(text, /Proposals[^.]*?(?=$|[.!])/i);
 
     items.push({
+      source_index: items.length,
       job_key: jobKey,
       job_id: jobId,
       job_url: jobUrl,
@@ -161,6 +171,7 @@ export function extractListItemsFromDocument(doc) {
     const proposals = findProposalText(container) || findFirstMatch(containerText, /Proposals[^.]*?(?=$|[.!])/i);
 
     items.push({
+      source_index: items.length,
       job_key: jobKey,
       job_id: jobId,
       job_url: jobUrl,
@@ -187,8 +198,21 @@ function extractSectionText(container, headingRegex) {
 
 export function extractDetailFromSlider(slider) {
   if (!slider) return null;
-  const descriptionElement = slider.querySelector(".description") || slider.querySelector("p") || slider;
-  const descriptionFull = textWithBreaks(descriptionElement);
+  const explicitDescription =
+    slider.querySelector('[data-test*="description"]') ||
+    slider.querySelector('[class*="description"]');
+  let descriptionFull = "";
+  if (explicitDescription) {
+    descriptionFull = textWithBreaks(explicitDescription);
+  } else {
+    const descriptionCandidates = [
+      ...slider.querySelectorAll("article, section, p"),
+    ];
+    descriptionFull = pickLongestText(descriptionCandidates);
+  }
+  if (!descriptionFull) {
+    descriptionFull = textWithBreaks(slider.querySelector("p") || slider);
+  }
   const deliverables = extractSectionText(slider, /Deliverables/i);
   const skills = extractSectionText(slider, /\bSkills\b/i);
   const client = extractSectionText(slider, /About the client|Client/i);

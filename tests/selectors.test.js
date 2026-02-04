@@ -4,6 +4,7 @@ import {
   findLoadMoreButton,
   detectAuthChallenge,
   findSliderContainer,
+  findDetailContentContainer,
 } from "../extension/src/core/selectors.js";
 
 describe("selectors", () => {
@@ -32,5 +33,23 @@ describe("selectors", () => {
     const dom = new JSDOM(`<div role="dialog">Job Details</div>`);
     const { container } = findSliderContainer(dom.window.document);
     expect(container).not.toBe(null);
+  });
+
+  it("finds slider container by class fallback", () => {
+    const dom = new JSDOM(`<div class="job-details-slider">Job Details body</div>`);
+    const { container } = findSliderContainer(dom.window.document);
+    expect(container).not.toBe(null);
+  });
+
+  it("finds detail content container from main content", () => {
+    const dom = new JSDOM(`
+      <main>
+        <section class="content">tiny</section>
+        <section class="job-details">This is a long detail content block for testing parser fallback.</section>
+      </main>
+    `);
+    const { container } = findDetailContentContainer(dom.window.document);
+    expect(container).not.toBe(null);
+    expect(container.textContent).toContain("long detail content block");
   });
 });

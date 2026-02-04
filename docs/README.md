@@ -19,3 +19,7 @@
 - 修复详情链接识别：支持 `/details/` 路径与 `%7E` 编码 job_id 解析。
 - 增强列表与按钮兜底策略：支持 card fallback 提取、`role=button` 的 Load More 检测。
 - 日志/导出文件统一输出到浏览器下载目录下 `UpworkJobScout/` 子目录，并在下载失败时返回可见错误。
+- 增强详情面板识别：支持 dialog/class/panel 多策略识别与 `/details/` 路由下的内容容器兜底。
+- `Download Log` 改为手动选择保存路径（saveAs）。
+- 修复 Service Worker 下载兼容：移除 `URL.createObjectURL`，改为 `data:` URL 方案，避免 `URL.createObjectURL is not a function`。
+- 增强详情打开策略：URL/job_id/标题/索引四级兜底，降低 `DETAIL_READY_TIMEOUT_10S` 误报。

@@ -251,7 +251,8 @@
   }
 
   async function runDetailPhase(parser, selectors, storageKeys) {
-    for (const jobKey of jobsOrder) {
+    for (let i = 0; i < jobsOrder.length; i += 1) {
+      const jobKey = jobsOrder[i];
       if (state.stopRequested) return finishRun("STOPPED", storageKeys);
       const auth = selectors.detectAuthChallenge(document, location.href);
       if (auth.detected) {
@@ -261,26 +262,26 @@
       const record = jobsByKey[jobKey];
       if (!record) continue;
 
-      const link = findLinkByUrl(record.job_url);
-      if (link) {
-        link.click();
-      } else {
-        const clicked = clickCardByTitle(record.title);
-        if (!clicked) {
-          await recordDetailFailure(storageKeys, record, "DETAIL_SLIDER_OPEN_FAILED");
-          continue;
-        }
+      const openMethod = openDetailForRecord(record, i);
+      if (!openMethod.ok) {
+        await recordDetailFailure(storageKeys, record, "DETAIL_SLIDER_OPEN_FAILED");
+        continue;
       }
 
       const slider = await waitForSlider(selectors, 10000);
       if (!slider) {
         await recordError(storageKeys, {
           error_code: "DETAIL_READY_TIMEOUT_10S",
-          error_message_en: "Detail slider not ready",
-          error_message_zh: "详情面板未就绪",
+          error_message_en: `Detail slider not ready via ${openMethod.strategy}`,
+          error_message_zh: `详情面板未就绪（打开策略：${openMethod.strategy}）`,
           step: "DETAIL_READY",
           url: record.job_url,
-          selector_hint: JSON.stringify({ strategy: "S1/S2", field: "slider" }),
+          selector_hint: JSON.stringify({
+            strategy: `S1/S2|open:${openMethod.strategy}`,
+            field: "slider",
+            title: record.title || "",
+            source_index: record.source_index ?? i,
+          }),
           job_key: record.job_key,
         });
         return finishRun("STOPPED", storageKeys, "DETAIL_READY_TIMEOUT_10S");
@@ -326,10 +327,18 @@
   function findLinkByUrl(url) {
     if (!url) return null;
     const anchors = Array.from(document.querySelectorAll("a"));
+    const decodedUrl = safeDecode(url);
     return anchors.find((a) => {
       const href = a.getAttribute("href");
       if (!href) return false;
-      return url.includes(href) || href.includes(url);
+      const abs = safeAbsUrl(href);
+      const decodedHref = safeDecode(abs);
+      return (
+        abs === url ||
+        decodedHref === decodedUrl ||
+        decodedUrl.includes(decodedHref) ||
+        decodedHref.includes(decodedUrl)
+      );
     });
   }
 
@@ -347,11 +356,84 @@
       ).toLowerCase();
       if (!text) continue;
       if (text.includes(target) || target.includes(text)) {
-        el.click();
+        safeClick(el);
         return true;
       }
     }
     return false;
+  }
+
+  function openDetailForRecord(record, index) {
+    const byUrl = findLinkByUrl(record.job_url);
+    if (byUrl) {
+      safeClick(byUrl);
+      return { ok: true, strategy: "URL_LINK" };
+    }
+
+    if (record.job_id) {
+      const byId = Array.from(document.querySelectorAll('a[href*="/details/"]')).find((a) =>
+        safeDecode(safeAbsUrl(a.getAttribute("href") || "")).includes(record.job_id)
+      );
+      if (byId) {
+        safeClick(byId);
+        return { ok: true, strategy: "JOB_ID_LINK" };
+      }
+    }
+
+    if (clickCardByTitle(record.title)) {
+      return { ok: true, strategy: "TITLE_CARD" };
+    }
+
+    const byIndex = clickCardByIndex(record.source_index ?? index);
+    if (byIndex) {
+      return { ok: true, strategy: "INDEX_CARD" };
+    }
+
+    return { ok: false, strategy: "NONE" };
+  }
+
+  function clickCardByIndex(index) {
+    if (typeof index !== "number" || index < 0) return false;
+    const candidates = Array.from(
+      document.querySelectorAll(
+        '[data-test*="job"], [class*="job-tile"], article, li[data-test*="job"], div[data-ev-label*="job"]'
+      )
+    );
+    if (index >= candidates.length) return false;
+    safeClick(candidates[index]);
+    return true;
+  }
+
+  function safeClick(el) {
+    if (!el) return false;
+    try {
+      el.scrollIntoView({ block: "center", inline: "center" });
+    } catch {
+      // ignore
+    }
+    el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    if (typeof el.click === "function") {
+      el.click();
+    }
+    return true;
+  }
+
+  function safeDecode(value) {
+    try {
+      return decodeURIComponent(value || "");
+    } catch {
+      return value || "";
+    }
+  }
+
+  function safeAbsUrl(href) {
+    try {
+      return new URL(href, location.href).toString();
+    } catch {
+      return href || "";
+    }
   }
 
   function normalizeText(text) {
@@ -364,6 +446,12 @@
       const { container } = selectors.findSliderContainer(document);
       if (container) {
         return container;
+      }
+      if (location.href.includes("/details/")) {
+        const fallback = selectors.findDetailContentContainer(document);
+        if (fallback.container) {
+          return fallback.container;
+        }
       }
       await sleep(300);
     }
@@ -476,7 +564,8 @@
       state.last_error = result.error || "导出失败";
       updateView();
     } else if (kind === "log") {
-      state.last_error = `日志已触发下载：下载目录/UpworkJobScout/${state.run_id}.log.json`;
+      const path = result?.filename || `UpworkJobScout/${state.run_id}.log.json`;
+      state.last_error = `日志下载已触发：${path}`;
       updateView();
     }
   }
