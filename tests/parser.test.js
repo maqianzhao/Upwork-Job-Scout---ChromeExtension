@@ -66,6 +66,7 @@ describe("parser", () => {
     const dom = new JSDOM(html);
     const slider = dom.window.document.querySelector("[role='dialog']");
     const detail = extractDetailFromSlider(slider);
+    expect(detail.title_from_detail).toBe("Senior JS Dev");
     expect(detail.description_full).toContain("Line1");
     expect(detail.deliverables_raw).toContain("Build API");
     expect(detail.required_skills_detail_raw).toContain("React");
@@ -103,5 +104,23 @@ describe("parser", () => {
     expect(items.length).toBe(1);
     expect(items[0].title).toBe("Build Chrome Extension");
     expect(items[0].job_key.startsWith("card_")).toBe(true);
+  });
+
+  it("ignores detail-panel links when extracting list items", () => {
+    const html = `
+      <div role="dialog" class="job-details-slider">
+        <a href="/nx/find-work/best-matches/details/~99">Opened detail item</a>
+        <div>About the client</div>
+      </div>
+      <article class="job-tile">
+        <a href="/nx/find-work/best-matches/details/~01">Real list item</a>
+        <div>Hourly</div>
+        <div>$20-$40</div>
+      </article>
+    `;
+    const dom = new JSDOM(html, { url: "https://www.upwork.com/nx/find-work/best-matches" });
+    const items = extractListItemsFromDocument(dom.window.document);
+    expect(items.length).toBe(1);
+    expect(items[0].job_id).toBe("~01");
   });
 });

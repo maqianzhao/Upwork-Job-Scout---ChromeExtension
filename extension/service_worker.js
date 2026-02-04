@@ -1,6 +1,11 @@
 import { toCsv, toMarkdown } from "./src/core/exporter.js";
 import { createLogJson } from "./src/core/log.js";
-import { runMetaKey, runJobsKey, runErrorsKey } from "./src/core/storage.js";
+import {
+  runMetaKey,
+  runJobsKey,
+  runErrorsKey,
+  runEventsKey,
+} from "./src/core/storage.js";
 
 const storageGet = (keys) =>
   new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -38,10 +43,12 @@ async function exportAll(runId) {
   const metaKey = runMetaKey(runId);
   const jobsKey = runJobsKey(runId);
   const errorsKey = runErrorsKey(runId);
-  const data = await storageGet([metaKey, jobsKey, errorsKey]);
+  const eventsKey = runEventsKey(runId);
+  const data = await storageGet([metaKey, jobsKey, errorsKey, eventsKey]);
   const meta = data[metaKey] || {};
   const jobs = Object.values(data[jobsKey] || {});
   const errors = data[errorsKey] || [];
+  const events = data[eventsKey] || [];
 
   const csv = toCsv(meta, jobs);
   const md = toMarkdown(meta, jobs);
@@ -68,7 +75,7 @@ async function exportAll(runId) {
   const logJson = createLogJson({
     run_meta: meta,
     errors,
-    events: [],
+    events,
     summary: { download_ids: { csv: csvId, md: mdId, log: null } },
   });
 
@@ -90,10 +97,12 @@ async function exportOne(runId, type) {
   const metaKey = runMetaKey(runId);
   const jobsKey = runJobsKey(runId);
   const errorsKey = runErrorsKey(runId);
-  const data = await storageGet([metaKey, jobsKey, errorsKey]);
+  const eventsKey = runEventsKey(runId);
+  const data = await storageGet([metaKey, jobsKey, errorsKey, eventsKey]);
   const meta = data[metaKey] || {};
   const jobs = Object.values(data[jobsKey] || {});
   const errors = data[errorsKey] || [];
+  const events = data[eventsKey] || [];
 
   if (type === "csv") {
     const csv = toCsv(meta, jobs);
@@ -113,8 +122,8 @@ async function exportOne(runId, type) {
     const logJson = createLogJson({
       run_meta: meta,
       errors,
-      events: [],
-      summary: { download_ids: { csv: null, md: null, log: null } },
+      events,
+      summary: { download_ids: meta.download_ids || { csv: null, md: null, log: null } },
     });
     const filename = `${DOWNLOAD_DIR}/${meta.run_id || runId}.log.json`;
     await downloadText(

@@ -26,7 +26,9 @@
   let jobsByKey = {};
   let jobsOrder = [];
   let errors = [];
+  let events = [];
   let storageKeysRef = null;
+  let logRef = null;
 
   async function init() {
     let overlayModule;
@@ -36,16 +38,18 @@
       console.error("[UJSC] overlay import failed", err);
       throw err;
     }
-    const [{ createOverlay }, parser, selectors, storageKeys] = await Promise.all([
+    const [{ createOverlay }, parser, selectors, storageKeys, logUtils] = await Promise.all([
       Promise.resolve(overlayModule),
       import(chrome.runtime.getURL("src/core/parser.js")),
       import(chrome.runtime.getURL("src/core/selectors.js")),
       import(chrome.runtime.getURL("src/core/storage.js")),
+      import(chrome.runtime.getURL("src/core/log.js")),
     ]);
 
     injectCss();
 
     storageKeysRef = storageKeys;
+    logRef = logUtils;
     overlayApi = createOverlay({
       onStart: (maxItems) => startRun(maxItems, parser, selectors, storageKeys),
       onStop: () => requestStop(),
@@ -100,6 +104,7 @@
       [storageKeys.runMetaKey(runId)]: meta,
       [storageKeys.runJobsKey(runId)]: {},
       [storageKeys.runErrorsKey(runId)]: [],
+      [storageKeys.runEventsKey(runId)]: [],
     });
     await updateRunsIndex(storageKeys, runId);
     return meta;
@@ -111,6 +116,31 @@
     const current = data[RUNS_INDEX_KEY] || [];
     const next = [runId, ...current.filter((id) => id !== runId)].slice(0, 20);
     await storageSet({ [RUNS_INDEX_KEY]: next });
+  }
+
+  function buildEvent(payload) {
+    if (typeof logRef?.createEventRecord === "function") {
+      return logRef.createEventRecord(payload);
+    }
+    const record = {
+      event_code: payload.event_code,
+      step: payload.step,
+      ts: payload.ts,
+    };
+    if (payload.job_key) record.job_key = payload.job_key;
+    if (payload.url) record.url = payload.url;
+    if (payload.details) record.details = payload.details;
+    return record;
+  }
+
+  async function recordEvent(storageKeys, payload) {
+    if (!state.run_id) return;
+    const event = buildEvent({
+      ...payload,
+      ts: payload.ts || nowIso(),
+    });
+    events.push(event);
+    await storageSet({ [storageKeys.runEventsKey(state.run_id)]: events });
   }
 
   async function startRun(maxItems, parser, selectors, storageKeys) {
@@ -132,6 +162,18 @@
     jobsByKey = {};
     jobsOrder = [];
     errors = [];
+    events = [];
+    await recordEvent(storageKeys, {
+      event_code: "RUN_STARTED",
+      step: "RUN_INIT",
+      url: location.href,
+      details: { max_items: state.max_items },
+    });
+    await recordEvent(storageKeys, {
+      event_code: "LIST_SCAN_STARTED",
+      step: "LIST_SCAN",
+      url: location.href,
+    });
     updateView();
 
     const listResult = await runListPhase(parser, selectors, storageKeys);
@@ -182,12 +224,22 @@
       updateView();
 
       if (state.counts.list_found >= state.max_items) {
+        await recordEvent(storageKeys, {
+          event_code: "LIST_SCAN_FINISHED",
+          step: "LIST_SCAN",
+          details: { list_found: state.counts.list_found, reason: "MAX_ITEMS_REACHED" },
+        });
         return "LIST_DONE";
       }
 
       const { button } = selectors.findLoadMoreButton(document);
       if (!button) {
         if (state.counts.list_found > 0) {
+          await recordEvent(storageKeys, {
+            event_code: "LIST_SCAN_FINISHED",
+            step: "LIST_SCAN",
+            details: { list_found: state.counts.list_found, reason: "NO_LOAD_MORE" },
+          });
           return "LIST_DONE";
         }
         const ready = await waitForInitialListOrButton(parser, selectors, 12000);
@@ -206,9 +258,19 @@
       }
 
       button.click();
+      await recordEvent(storageKeys, {
+        event_code: "LOAD_MORE_CLICKED",
+        step: "LOAD_MORE",
+        details: { before_count: state.counts.list_found },
+      });
       const before = state.counts.list_found;
       const success = await waitForListGrowth(parser, before, 10000);
       if (!success) {
+        await recordEvent(storageKeys, {
+          event_code: "LOAD_MORE_NO_DELTA",
+          step: "LOAD_MORE",
+          details: { before_count: before },
+        });
         await recordError(storageKeys, {
           error_code: "LIST_LOAD_MORE_TIMEOUT_10S",
           error_message_en: "Load more jobs timed out",
@@ -219,6 +281,11 @@
         });
         return finishRun("STOPPED", storageKeys, "LIST_LOAD_MORE_TIMEOUT_10S");
       }
+      await recordEvent(storageKeys, {
+        event_code: "LOAD_MORE_SUCCESS",
+        step: "LOAD_MORE",
+        details: { before_count: before },
+      });
     }
   }
 
@@ -263,12 +330,25 @@
       if (!record) continue;
 
       const openMethod = openDetailForRecord(record, i);
+      await recordEvent(storageKeys, {
+        event_code: "DETAIL_OPEN_REQUESTED",
+        step: "DETAIL_OPEN",
+        job_key: record.job_key,
+        url: record.job_url || location.href,
+        details: { strategy: openMethod.strategy, index: i },
+      });
       if (!openMethod.ok) {
         await recordDetailFailure(storageKeys, record, "DETAIL_SLIDER_OPEN_FAILED");
         continue;
       }
 
-      const slider = await waitForSlider(selectors, 10000);
+      const slider = await waitForSlider(
+        selectors,
+        parser,
+        record,
+        10000,
+        () => openDetailForRecord(record, i)
+      );
       if (!slider) {
         await recordError(storageKeys, {
           error_code: "DETAIL_READY_TIMEOUT_10S",
@@ -288,7 +368,7 @@
       }
 
       const detail = parser.extractDetailFromSlider(slider);
-      if (!detail || !detail.description_full || !(record.title || detail.title)) {
+      if (!detail || !detail.description_full || !(record.title || detail.title_from_detail)) {
         await recordError(storageKeys, {
           error_code: "DETAIL_PARSE_DESCRIPTION_MISSING",
           error_message_en: "Description missing",
@@ -298,7 +378,7 @@
           selector_hint: JSON.stringify({ strategy: "S1/S2", field: "description_full" }),
           job_key: record.job_key,
         });
-        return finishRun("STOPPED", storageKeys, "DETAIL_READY_TIMEOUT_10S");
+        return finishRun("STOPPED", storageKeys, "DETAIL_PARSE_DESCRIPTION_MISSING");
       }
 
       Object.assign(record, detail, {
@@ -312,6 +392,12 @@
         record.job_id = parser.parseJobIdFromUrl(record.job_url);
       }
       state.counts.detail_ok += 1;
+      await recordEvent(storageKeys, {
+        event_code: "DETAIL_READY",
+        step: "DETAIL_READY",
+        job_key: record.job_key,
+        url: location.href,
+      });
       await persistJobs(storageKeys);
       await updateMeta(storageKeys);
       updateView();
@@ -319,6 +405,11 @@
       const closeBtn = selectors.findCloseButton(slider);
       if (closeBtn) closeBtn.click();
       else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await recordEvent(storageKeys, {
+        event_code: "DETAIL_CLOSED",
+        step: "DETAIL_CLOSE",
+        job_key: record.job_key,
+      });
       await sleep(300);
     }
     return "DETAIL_DONE";
@@ -440,18 +531,41 @@
     return (text || "").replace(/\s+/g, " ").trim();
   }
 
-  async function waitForSlider(selectors, timeoutMs) {
+  function isDetailUrlReady(record) {
+    const current = safeDecode(location.href);
+    if (!current.includes("/details/")) return false;
+    if (record?.job_id) {
+      return current.includes(record.job_id);
+    }
+    return true;
+  }
+
+  async function waitForSlider(selectors, parser, record, timeoutMs, retryOpen) {
     const start = Date.now();
+    let lastRetry = start;
     while (Date.now() - start < timeoutMs) {
       const { container } = selectors.findSliderContainer(document);
-      if (container) {
-        return container;
+      if (container && isDetailUrlReady(record)) {
+        const detail = parser.extractDetailFromSlider(container);
+        if (detail?.description_full && detail.description_full.length >= 20) {
+          return container;
+        }
       }
-      if (location.href.includes("/details/")) {
+      if (isDetailUrlReady(record) && location.href.includes("/details/")) {
         const fallback = selectors.findDetailContentContainer(document);
         if (fallback.container) {
-          return fallback.container;
+          const detail = parser.extractDetailFromSlider(fallback.container);
+          if (detail?.description_full && detail.description_full.length >= 20) {
+            return fallback.container;
+          }
         }
+      }
+      if (typeof retryOpen === "function" && Date.now() - lastRetry >= 1200) {
+        retryOpen();
+        lastRetry = Date.now();
+      }
+      if (state.stopRequested) {
+        return null;
       }
       await sleep(300);
     }
@@ -472,6 +586,13 @@
       url: record.job_url,
       selector_hint: JSON.stringify({ field: "detail", strategy: "link" }),
       job_key: record.job_key,
+    });
+    await recordEvent(storageKeys, {
+      event_code: "DETAIL_OPEN_FAILED",
+      step: "DETAIL_OPEN",
+      job_key: record.job_key,
+      url: record.job_url || location.href,
+      details: { error_code: errorCode },
     });
   }
 
@@ -519,6 +640,12 @@
       url: location.href,
       selector_hint: JSON.stringify({ strategy: auth.strategy, field: "auth" }),
     });
+    await recordEvent(storageKeys, {
+      event_code: "RUN_PAUSED_AUTH",
+      step: "AUTH_DETECT",
+      url: location.href,
+      details: { reason: auth.reason, strategy: auth.strategy },
+    });
     await updateMeta(storageKeys);
     updateView();
   }
@@ -529,6 +656,11 @@
     state.stop_reason = stopReason;
     state.run_finished_at = nowIso();
     await updateMeta(storageKeys);
+    await recordEvent(storageKeys, {
+      event_code: finalStatus === "DONE" ? "RUN_DONE" : "RUN_STOPPED",
+      step: "RUN_FINISH",
+      details: { stop_reason: stopReason || null },
+    });
     updateView();
     await sendMessage({ type: "EXPORT_ALL", run_id: state.run_id });
     state.status = finalStatus;
@@ -540,6 +672,11 @@
     state.status = "ERROR";
     state.phase = "-";
     await updateMeta(storageKeys);
+    await recordEvent(storageKeys, {
+      event_code: "RUN_ERROR",
+      step: "RUN_FINISH",
+      details: { last_error: state.last_error || null },
+    });
     updateView();
     return "ERROR";
   }

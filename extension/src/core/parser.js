@@ -82,6 +82,15 @@ function buildFallbackKeyFromTitle(title, index) {
   return `card_${index}_${base || "unknown"}`;
 }
 
+function isInsideDetailContainer(element) {
+  if (!element) return false;
+  return Boolean(
+    element.closest(
+      '[role="dialog"], [aria-modal="true"], [class*="slider"], [class*="drawer"], [class*="job-details"], [data-test*="job-details"], [id*="job-details"]'
+    )
+  );
+}
+
 function extractCardsFallback(doc) {
   const candidates = Array.from(
     doc.querySelectorAll(
@@ -91,6 +100,7 @@ function extractCardsFallback(doc) {
   const items = [];
   const seen = new Set();
   for (const container of candidates) {
+    if (isInsideDetailContainer(container)) continue;
     const title = normalizeText(
       container.querySelector("h1, h2, h3, h4, a")?.textContent || ""
     );
@@ -148,13 +158,16 @@ export function extractListItemsFromDocument(doc) {
       : Array.from(doc.querySelectorAll('a[href*="/details/"]'));
 
   const items = [];
+  const seen = new Set();
   for (const link of anchors) {
+    if (isInsideDetailContainer(link)) continue;
     const href = link.getAttribute("href");
     if (!href) continue;
     const jobUrl = new URL(href, doc.baseURI).toString();
     const jobId = parseJobIdFromUrl(jobUrl);
     const jobKey = buildJobKey({ jobId, jobUrl });
     if (!jobKey) continue;
+    if (seen.has(jobKey)) continue;
     const container = link.closest("article, section, li, div") || link.parentElement;
     const containerText = normalizeText(container?.textContent || "");
 
@@ -183,6 +196,7 @@ export function extractListItemsFromDocument(doc) {
       skills_tags_raw: extractSkills(container),
       proposal_count_raw: proposals || null,
     });
+    seen.add(jobKey);
   }
   if (items.length > 0) return items;
   return extractCardsFallback(doc);
@@ -198,6 +212,9 @@ function extractSectionText(container, headingRegex) {
 
 export function extractDetailFromSlider(slider) {
   if (!slider) return null;
+  const titleFromDetail = normalizeText(
+    slider.querySelector("h1, h2, h3, [data-test*='title']")?.textContent || ""
+  );
   const explicitDescription =
     slider.querySelector('[data-test*="description"]') ||
     slider.querySelector('[class*="description"]');
@@ -221,6 +238,7 @@ export function extractDetailFromSlider(slider) {
     : "unknown";
 
   return {
+    title_from_detail: titleFromDetail || null,
     description_full: descriptionFull || null,
     deliverables_raw: deliverables || null,
     attachments_present: attachments,

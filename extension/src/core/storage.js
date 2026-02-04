@@ -11,3 +11,7 @@ export function runJobsKey(runId) {
 export function runErrorsKey(runId) {
   return `runs:${runId}:errors`;
 }
+
+export function runEventsKey(runId) {
+  return `runs:${runId}:events`;
+}

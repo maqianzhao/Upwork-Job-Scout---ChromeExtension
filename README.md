@@ -46,5 +46,8 @@ npm test
 - 下载目录默认在浏览器下载目录下的 `UpworkJobScout/` 子目录（例如 `Downloads/UpworkJobScout/`）
 - 点击 `Download Log` 时会弹出浏览器“另存为”对话框，可手动选择日志保存路径
 - 已修复 Service Worker 下载兼容问题（不再依赖 `URL.createObjectURL`）
+- `log.json` 现包含事件流（`events`），用于定位每轮 run 的步骤轨迹（开始/Load More/详情打开/结束）
+- 列表提取会跳过已打开详情面板内的链接，避免误把详情链接当作列表项
+- 详情就绪判定增加 URL + 描述长度校验，并在等待期内自动重试点击，减少“1 秒完成但无有效数据”的误判
 
 详细规范请查看：`PRD-browser-extension-v0.4.md`

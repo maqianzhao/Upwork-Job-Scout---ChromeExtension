@@ -15,6 +15,24 @@ function scoreContainer(el) {
   return textLen;
 }
 
+function hasDetailSemantics(el) {
+  if (!el) return false;
+  const text = normalizeText(el.textContent || "").toLowerCase();
+  const hasKeyword =
+    text.includes("job details") ||
+    text.includes("about the client") ||
+    text.includes("deliverables") ||
+    text.includes("proposals") ||
+    text.includes("hourly") ||
+    text.includes("fixed-price") ||
+    text.includes("attachments") ||
+    text.includes("skills");
+  const hasDescriptionNode = Boolean(
+    el.querySelector('[data-test*="description"], [class*="description"]')
+  );
+  return hasKeyword || hasDescriptionNode;
+}
+
 export function findLoadMoreButton(doc) {
   const candidates = Array.from(
     doc.querySelectorAll("button, [role='button']")
@@ -40,7 +58,9 @@ export function findLoadMoreButton(doc) {
 export function findSliderContainer(doc) {
   const roleCandidates = Array.from(
     doc.querySelectorAll('[role="dialog"], [aria-modal="true"]')
-  ).filter(isVisible);
+  )
+    .filter(isVisible)
+    .filter(hasDetailSemantics);
   if (roleCandidates.length > 0) {
     const best = roleCandidates.sort((a, b) => scoreContainer(b) - scoreContainer(a))[0];
     return { container: best, strategy: "S1" };
@@ -48,9 +68,11 @@ export function findSliderContainer(doc) {
 
   const classCandidates = Array.from(
     doc.querySelectorAll(
-      '[class*="slider"], [class*="drawer"], [class*="panel"], [class*="job-details"], [data-test*="job-details"], [data-test*="jobDetails"], [id*="job-details"]'
+      '[class*="slider"], [class*="drawer"], [class*="job-details"], [data-test*="job-details"], [data-test*="jobDetails"], [id*="job-details"]'
     )
-  ).filter(isVisible);
+  )
+    .filter(isVisible)
+    .filter(hasDetailSemantics);
   if (classCandidates.length > 0) {
     const best = classCandidates.sort((a, b) => scoreContainer(b) - scoreContainer(a))[0];
     return { container: best, strategy: "S2" };

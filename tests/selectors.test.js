@@ -41,6 +41,12 @@ describe("selectors", () => {
     expect(container).not.toBe(null);
   });
 
+  it("does not treat generic panel as slider container", () => {
+    const dom = new JSDOM(`<div class="left-panel">Navigation panel</div>`);
+    const { container } = findSliderContainer(dom.window.document);
+    expect(container).toBe(null);
+  });
+
   it("finds detail content container from main content", () => {
     const dom = new JSDOM(`
       <main>
