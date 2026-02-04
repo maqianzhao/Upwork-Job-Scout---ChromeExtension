@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Upwork Job Scout",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Best matches list+detail scraper for Upwork (local only).",
   "permissions": ["storage", "downloads", "activeTab", "scripting"],
   "host_permissions": ["https://www.upwork.com/*"],
@@ -13,6 +13,18 @@
     {
       "matches": ["https://www.upwork.com/*"],
       "js": ["content_script.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "overlay/overlay.css",
+        "overlay/overlay.js",
+        "src/core/parser.js",
+        "src/core/selectors.js",
+        "src/core/storage.js"
+      ],
+      "matches": ["https://www.upwork.com/*"]
     }
   ],
   "action": {

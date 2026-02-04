@@ -1,4 +1,5 @@
 (() => {
+  console.info("[UJSC] content_script loaded");
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const storageGet = (keys) =>
     new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -28,8 +29,15 @@
   let storageKeysRef = null;
 
   async function init() {
+    let overlayModule;
+    try {
+      overlayModule = await import(chrome.runtime.getURL("overlay/overlay.js"));
+    } catch (err) {
+      console.error("[UJSC] overlay import failed", err);
+      throw err;
+    }
     const [{ createOverlay }, parser, selectors, storageKeys] = await Promise.all([
-      import(chrome.runtime.getURL("overlay/overlay.js")),
+      Promise.resolve(overlayModule),
       import(chrome.runtime.getURL("src/core/parser.js")),
       import(chrome.runtime.getURL("src/core/selectors.js")),
       import(chrome.runtime.getURL("src/core/storage.js")),
@@ -420,5 +428,7 @@
     updateView();
   }
 
-  init().catch(() => {});
+  init().catch((err) => {
+    console.error("[UJSC] init failed", err);
+  });
 })();

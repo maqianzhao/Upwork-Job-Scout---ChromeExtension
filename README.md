@@ -35,6 +35,8 @@ npm test
 3. 点击“加载已解压的扩展程序”
 4. 选择本项目下的 `extension/` 目录
 
+如更新了代码但未生效，请在 `chrome://extensions` 中点击“重新加载”扩展。
+
 ## 说明
 
 - 仅支持 `https://www.upwork.com/nx/find-work/best-matches*`
