@@ -6,14 +6,21 @@ const storageGet = (keys) =>
   new Promise((resolve) => chrome.storage.local.get(keys, resolve));
 const storageSet = (obj) =>
   new Promise((resolve) => chrome.storage.local.set(obj, resolve));
+const DOWNLOAD_DIR = "UpworkJobScout";
 
 async function downloadText(filename, content, mime) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
-  const downloadId = await new Promise((resolve) => {
-    chrome.downloads.download({ url, filename, saveAs: false }, (id) => resolve(id));
+  const downloadId = await new Promise((resolve, reject) => {
+    chrome.downloads.download({ url, filename, saveAs: false }, (id) => {
+      if (chrome.runtime.lastError || !id) {
+        reject(new Error(chrome.runtime.lastError?.message || "download failed"));
+        return;
+      }
+      resolve(id);
+    });
   });
-  return downloadId || null;
+  return downloadId;
 }
 
 async function exportAll(runId) {
@@ -33,12 +40,12 @@ async function exportAll(runId) {
 
   try {
     csvId = await downloadText(
-      `${meta.run_id || runId}.csv`,
+      `${DOWNLOAD_DIR}/${meta.run_id || runId}.csv`,
       csv,
       "text/csv;charset=utf-8"
     );
     mdId = await downloadText(
-      `${meta.run_id || runId}.md`,
+      `${DOWNLOAD_DIR}/${meta.run_id || runId}.md`,
       md,
       "text/markdown;charset=utf-8"
     );
@@ -56,7 +63,7 @@ async function exportAll(runId) {
 
   try {
     logId = await downloadText(
-      `${meta.run_id || runId}.log.json`,
+      `${DOWNLOAD_DIR}/${meta.run_id || runId}.log.json`,
       JSON.stringify(logJson, null, 2),
       "application/json;charset=utf-8"
     );
@@ -79,10 +86,18 @@ async function exportOne(runId, type) {
 
   if (type === "csv") {
     const csv = toCsv(meta, jobs);
-    await downloadText(`${meta.run_id || runId}.csv`, csv, "text/csv;charset=utf-8");
+    await downloadText(
+      `${DOWNLOAD_DIR}/${meta.run_id || runId}.csv`,
+      csv,
+      "text/csv;charset=utf-8"
+    );
   } else if (type === "md") {
     const md = toMarkdown(meta, jobs);
-    await downloadText(`${meta.run_id || runId}.md`, md, "text/markdown;charset=utf-8");
+    await downloadText(
+      `${DOWNLOAD_DIR}/${meta.run_id || runId}.md`,
+      md,
+      "text/markdown;charset=utf-8"
+    );
   } else if (type === "log") {
     const logJson = createLogJson({
       run_meta: meta,
@@ -91,7 +106,7 @@ async function exportOne(runId, type) {
       summary: { download_ids: { csv: null, md: null, log: null } },
     });
     await downloadText(
-      `${meta.run_id || runId}.log.json`,
+      `${DOWNLOAD_DIR}/${meta.run_id || runId}.log.json`,
       JSON.stringify(logJson, null, 2),
       "application/json;charset=utf-8"
     );
@@ -117,16 +132,20 @@ async function markExportError(meta, err) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
-    if (msg?.type === "EXPORT_ALL") {
-      await exportAll(msg.run_id);
-    } else if (msg?.type === "EXPORT_CSV") {
-      await exportOne(msg.run_id, "csv");
-    } else if (msg?.type === "EXPORT_MD") {
-      await exportOne(msg.run_id, "md");
-    } else if (msg?.type === "EXPORT_LOG") {
-      await exportOne(msg.run_id, "log");
+    try {
+      if (msg?.type === "EXPORT_ALL") {
+        await exportAll(msg.run_id);
+      } else if (msg?.type === "EXPORT_CSV") {
+        await exportOne(msg.run_id, "csv");
+      } else if (msg?.type === "EXPORT_MD") {
+        await exportOne(msg.run_id, "md");
+      } else if (msg?.type === "EXPORT_LOG") {
+        await exportOne(msg.run_id, "log");
+      }
+      sendResponse({ ok: true, download_dir: DOWNLOAD_DIR });
+    } catch (err) {
+      sendResponse({ ok: false, error: String(err?.message || err) });
     }
-    sendResponse({ ok: true });
   })();
   return true;
 });

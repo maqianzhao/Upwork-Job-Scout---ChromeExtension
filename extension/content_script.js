@@ -262,11 +262,15 @@
       if (!record) continue;
 
       const link = findLinkByUrl(record.job_url);
-      if (!link) {
-        await recordDetailFailure(storageKeys, record, "DETAIL_SLIDER_OPEN_FAILED");
-        continue;
+      if (link) {
+        link.click();
+      } else {
+        const clicked = clickCardByTitle(record.title);
+        if (!clicked) {
+          await recordDetailFailure(storageKeys, record, "DETAIL_SLIDER_OPEN_FAILED");
+          continue;
+        }
       }
-      link.click();
 
       const slider = await waitForSlider(selectors, 10000);
       if (!slider) {
@@ -300,6 +304,12 @@
         detail_status: "ok",
         last_updated_at: nowIso(),
       });
+      if (!record.job_url && location.href.includes("/details/")) {
+        record.job_url = location.href;
+      }
+      if (!record.job_id && record.job_url) {
+        record.job_id = parser.parseJobIdFromUrl(record.job_url);
+      }
       state.counts.detail_ok += 1;
       await persistJobs(storageKeys);
       await updateMeta(storageKeys);
@@ -321,6 +331,31 @@
       if (!href) return false;
       return url.includes(href) || href.includes(url);
     });
+  }
+
+  function clickCardByTitle(title) {
+    const target = normalizeText(title).toLowerCase();
+    if (!target) return false;
+    const candidates = Array.from(
+      document.querySelectorAll(
+        '[data-test*="job"], [class*="job-tile"], article, li[data-test*="job"], div[data-ev-label*="job"]'
+      )
+    );
+    for (const el of candidates) {
+      const text = normalizeText(
+        el.querySelector("h1, h2, h3, h4, a")?.textContent || ""
+      ).toLowerCase();
+      if (!text) continue;
+      if (text.includes(target) || target.includes(text)) {
+        el.click();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function normalizeText(text) {
+    return (text || "").replace(/\s+/g, " ").trim();
   }
 
   async function waitForSlider(selectors, timeoutMs) {
@@ -436,7 +471,14 @@
   async function exportType(kind) {
     if (!state.run_id) return;
     const typeMap = { csv: "EXPORT_CSV", md: "EXPORT_MD", log: "EXPORT_LOG" };
-    await sendMessage({ type: typeMap[kind], run_id: state.run_id });
+    const result = await sendMessage({ type: typeMap[kind], run_id: state.run_id });
+    if (result && result.ok === false) {
+      state.last_error = result.error || "导出失败";
+      updateView();
+    } else if (kind === "log") {
+      state.last_error = `日志已触发下载：下载目录/UpworkJobScout/${state.run_id}.log.json`;
+      updateView();
+    }
   }
 
   async function clearHistory() {

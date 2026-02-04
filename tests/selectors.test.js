@@ -15,6 +15,12 @@ describe("selectors", () => {
     expect(button).not.toBe(null);
   });
 
+  it("finds load more role button fallback", () => {
+    const dom = new JSDOM(`<div role="button">Show more jobs</div>`);
+    const { button } = findLoadMoreButton(dom.window.document);
+    expect(button).not.toBe(null);
+  });
+
   it("detects auth challenge by url", () => {
     const dom = new JSDOM(`<div>Sign in</div>`);
     const res = detectAuthChallenge(dom.window.document, "https://x/login");

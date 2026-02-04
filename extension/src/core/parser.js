@@ -64,6 +64,70 @@ function extractSkills(container) {
   return null;
 }
 
+function buildFallbackKeyFromTitle(title, index) {
+  const base = normalizeText(title || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 32);
+  return `card_${index}_${base || "unknown"}`;
+}
+
+function extractCardsFallback(doc) {
+  const candidates = Array.from(
+    doc.querySelectorAll(
+      '[data-test*="job"], [class*="job-tile"], article, li[data-test*="job"], div[data-ev-label*="job"]'
+    )
+  );
+  const items = [];
+  const seen = new Set();
+  for (const container of candidates) {
+    const title = normalizeText(
+      container.querySelector("h1, h2, h3, h4, a")?.textContent || ""
+    );
+    if (!title) continue;
+    const text = normalizeText(container.textContent || "");
+    const hasJobSignal =
+      /\b(hourly|fixed-price|proposals?|budget|\$)\b/i.test(text) ||
+      /\$[0-9]/.test(text);
+    if (!hasJobSignal) continue;
+
+    const fallbackKey = buildFallbackKeyFromTitle(title, items.length);
+    if (seen.has(fallbackKey)) continue;
+    seen.add(fallbackKey);
+
+    const link = container.querySelector('a[href*="/details/"]');
+    const href = link?.getAttribute("href") || null;
+    const jobUrl = href ? new URL(href, doc.baseURI).toString() : null;
+    const jobId = parseJobIdFromUrl(jobUrl);
+    const jobKey = buildJobKey({ jobId, jobUrl }) || fallbackKey;
+    const budget = findFirstMatch(text, /\$[0-9.,]+(?:\s*-\s*\$[0-9.,]+)?/);
+    const posted = findFirstMatch(
+      text,
+      /(\d+\s+(minute|hour|day|week|month|year)s?\s+ago|yesterday)/i
+    );
+    const proposals = findProposalText(container) || findFirstMatch(text, /Proposals[^.]*?(?=$|[.!])/i);
+
+    items.push({
+      job_key: jobKey,
+      job_id: jobId,
+      job_url: jobUrl,
+      title,
+      job_type: findFirstMatch(text, /\bHourly\b/i)
+        ? "Hourly"
+        : findFirstMatch(text, /\bFixed-price\b/i)
+          ? "Fixed-price"
+          : "unknown",
+      budget_or_hourly_range_raw: budget || null,
+      posted_time_raw: posted || null,
+      description_snippet: null,
+      skills_tags_raw: extractSkills(container),
+      proposal_count_raw: proposals || null,
+    });
+  }
+  return items;
+}
+
 export function extractListItemsFromDocument(doc) {
   const anchorsA1 = Array.from(
     doc.querySelectorAll('a[href*="/nx/find-work/best-matches/details/"]')
@@ -109,7 +173,8 @@ export function extractListItemsFromDocument(doc) {
       proposal_count_raw: proposals || null,
     });
   }
-  return items;
+  if (items.length > 0) return items;
+  return extractCardsFallback(doc);
 }
 
 function extractSectionText(container, headingRegex) {

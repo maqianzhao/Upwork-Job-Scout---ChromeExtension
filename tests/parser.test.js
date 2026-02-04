@@ -71,4 +71,21 @@ describe("parser", () => {
     expect(detail.required_skills_detail_raw).toContain("React");
     expect(detail.client_history_detail_raw).toContain("Great client");
   });
+
+  it("falls back to card extraction without details links", () => {
+    const html = `
+      <article class="job-tile">
+        <h3>Build Chrome Extension</h3>
+        <div>Hourly</div>
+        <div>$20-$40</div>
+        <div>2 hours ago</div>
+        <div>Proposals: 10 to 15</div>
+      </article>
+    `;
+    const dom = new JSDOM(html, { url: "https://www.upwork.com/nx/find-work/best-matches" });
+    const items = extractListItemsFromDocument(dom.window.document);
+    expect(items.length).toBe(1);
+    expect(items[0].title).toBe("Build Chrome Extension");
+    expect(items[0].job_key.startsWith("card_")).toBe(true);
+  });
 });

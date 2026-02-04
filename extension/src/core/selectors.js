@@ -2,15 +2,31 @@ function normalizeText(text) {
   return (text || "").replace(/\s+/g, " ").trim();
 }
 
+function isVisible(el) {
+  if (!el) return false;
+  const style = el.ownerDocument?.defaultView?.getComputedStyle(el);
+  if (!style) return true;
+  return style.display !== "none" && style.visibility !== "hidden";
+}
+
 export function findLoadMoreButton(doc) {
-  const buttons = Array.from(doc.querySelectorAll("button"));
-  const exact = buttons.find(
-    (b) => normalizeText(b.textContent).toLowerCase() === "load more jobs"
-  );
+  const candidates = Array.from(
+    doc.querySelectorAll("button, [role='button']")
+  ).filter(isVisible);
+  const exact = candidates.find((b) => {
+    const t = normalizeText(b.textContent).toLowerCase();
+    return t === "load more jobs" || t === "load more";
+  });
   if (exact) return { button: exact, strategy: "B1" };
-  const contains = buttons.find((b) =>
-    normalizeText(b.textContent).toLowerCase().includes("load more jobs")
-  );
+  const contains = candidates.find((b) => {
+    const t = normalizeText(b.textContent).toLowerCase();
+    return (
+      t.includes("load more jobs") ||
+      t.includes("load more") ||
+      t.includes("show more") ||
+      t.includes("more jobs")
+    );
+  });
   if (contains) return { button: contains, strategy: "B2" };
   return { button: null, strategy: null };
 }
