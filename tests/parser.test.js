@@ -12,6 +12,9 @@ describe("parser", () => {
     const url =
       "https://www.upwork.com/nx/find-work/best-matches/details/~022018254936864221677?pageTitle=Job%20Details";
     expect(parseJobIdFromUrl(url)).toBe("~022018254936864221677");
+    const encodedUrl =
+      "https://www.upwork.com/nx/find-work/best-matches/details/%7E022018254936864221677?pageTitle=Job%20Details";
+    expect(parseJobIdFromUrl(encodedUrl)).toBe("~022018254936864221677");
     expect(parseJobIdFromUrl("https://www.upwork.com")).toBe(null);
   });
 

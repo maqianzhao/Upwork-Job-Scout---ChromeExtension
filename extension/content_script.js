@@ -190,6 +190,10 @@
         if (state.counts.list_found > 0) {
           return "LIST_DONE";
         }
+        const ready = await waitForInitialListOrButton(parser, selectors, 12000);
+        if (ready) {
+          continue;
+        }
         await recordError(storageKeys, {
           error_code: "LIST_NO_ITEMS_FOUND",
           error_message_en: "No list items found and Load more button missing",
@@ -216,6 +220,21 @@
         return finishRun("STOPPED", storageKeys, "LIST_LOAD_MORE_TIMEOUT_10S");
       }
     }
+  }
+
+  async function waitForInitialListOrButton(parser, selectors, timeoutMs) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (state.stopRequested) return false;
+      const auth = selectors.detectAuthChallenge(document, location.href);
+      if (auth.detected) return false;
+      const items = parser.extractListItemsFromDocument(document);
+      if (items.length > 0) return true;
+      const { button } = selectors.findLoadMoreButton(document);
+      if (button) return true;
+      await sleep(500);
+    }
+    return false;
   }
 
   async function waitForListGrowth(parser, beforeCount, timeoutMs) {

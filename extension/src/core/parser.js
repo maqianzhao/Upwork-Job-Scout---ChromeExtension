@@ -2,7 +2,13 @@ export function parseJobIdFromUrl(url) {
   if (!url || typeof url !== "string") {
     return null;
   }
-  const match = url.match(/\/details\/(~[0-9A-Za-z]+)/);
+  let decoded = url;
+  try {
+    decoded = decodeURIComponent(url);
+  } catch {
+    // Keep original value when decoding fails.
+  }
+  const match = decoded.match(/\/details\/(~[0-9A-Za-z]+)/);
   return match ? match[1] : null;
 }
 
@@ -60,12 +66,12 @@ function extractSkills(container) {
 
 export function extractListItemsFromDocument(doc) {
   const anchorsA1 = Array.from(
-    doc.querySelectorAll('a[href*="/nx/find-work/best-matches/details/~"]')
+    doc.querySelectorAll('a[href*="/nx/find-work/best-matches/details/"]')
   );
   const anchors =
     anchorsA1.length > 0
       ? anchorsA1
-      : Array.from(doc.querySelectorAll('a[href*="/details/~"]'));
+      : Array.from(doc.querySelectorAll('a[href*="/details/"]'));
 
   const items = [];
   for (const link of anchors) {

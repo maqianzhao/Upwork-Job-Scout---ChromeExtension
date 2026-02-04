@@ -15,3 +15,5 @@
 ## 近期变更
 
 - 增加 `web_accessible_resources` 以确保 overlay 与模块可在内容脚本中正确加载。
+- 修复 Best matches 首屏延迟加载导致的误判：列表阶段在无数据时先等待 12 秒，再决定是否报 `LIST_NO_ITEMS_FOUND`。
+- 修复详情链接识别：支持 `/details/` 路径与 `%7E` 编码 job_id 解析。
