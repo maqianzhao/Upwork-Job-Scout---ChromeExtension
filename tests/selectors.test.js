@@ -5,6 +5,7 @@ import {
   detectAuthChallenge,
   findSliderContainer,
   findDetailContentContainer,
+  findCloseButton,
 } from "../extension/src/core/selectors.js";
 
 describe("selectors", () => {
@@ -57,5 +58,13 @@ describe("selectors", () => {
     const { container } = findDetailContentContainer(dom.window.document);
     expect(container).not.toBe(null);
     expect(container.textContent).toContain("long detail content block");
+  });
+
+  it("finds close button by Back text fallback", () => {
+    const dom = new JSDOM(`<div role="dialog"><button>Go Back</button></div>`);
+    const slider = dom.window.document.querySelector("[role='dialog']");
+    const btn = findCloseButton(slider);
+    expect(btn).not.toBe(null);
+    expect(btn.textContent).toContain("Go Back");
   });
 });

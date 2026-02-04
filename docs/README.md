@@ -26,3 +26,5 @@
 - 增加 run 事件持久化（`runs:${run_id}:events`），导出 log.json 时输出 `events` 便于定位问题。
 - 列表提取过滤详情面板节点，避免误提取导致“秒完成但无真实列表数据”。
 - 详情就绪判定增强：需命中 `/details/` URL 且描述长度达标；等待期间自动重试点击详情。
+- 基于真实探针结果适配 Upwork 新链路：支持从 `/jobs/..._~jobId` 提取 `job_id`。
+- 增强详情面板关闭策略（Close/Back/Escape/history.back），降低“只采到首条后卡住”的失败率。

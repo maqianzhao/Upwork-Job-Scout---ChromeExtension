@@ -8,8 +8,10 @@ export function parseJobIdFromUrl(url) {
   } catch {
     // Keep original value when decoding fails.
   }
-  const match = decoded.match(/\/details\/(~[0-9A-Za-z]+)/);
-  return match ? match[1] : null;
+  const detailMatch = decoded.match(/\/details\/(~[0-9A-Za-z]+)/);
+  if (detailMatch) return detailMatch[1];
+  const jobsSlugMatch = decoded.match(/_(~[0-9A-Za-z]+)(?:[/?]|$)/);
+  return jobsSlugMatch ? jobsSlugMatch[1] : null;
 }
 
 export function buildJobKey({ jobId, jobUrl }) {
@@ -92,11 +94,19 @@ function isInsideDetailContainer(element) {
 }
 
 function extractCardsFallback(doc) {
-  const candidates = Array.from(
+  const specificCandidates = Array.from(
     doc.querySelectorAll(
-      '[data-test*="job"], [class*="job-tile"], article, li[data-test*="job"], div[data-ev-label*="job"]'
+      "section.air3-card-section.air3-card-hover, section[data-ev-sublocation*='jobs'], [data-test*='JobTile']"
     )
   );
+  const candidates =
+    specificCandidates.length > 0
+      ? specificCandidates
+      : Array.from(
+          doc.querySelectorAll(
+            '[data-test*="job"], [class*="job-tile"], article, section, li[data-test*="job"], div[data-ev-label*="job"]'
+          )
+        );
   const items = [];
   const seen = new Set();
   for (const container of candidates) {
@@ -111,15 +121,18 @@ function extractCardsFallback(doc) {
       /\$[0-9]/.test(text);
     if (!hasJobSignal) continue;
 
-    const fallbackKey = buildFallbackKeyFromTitle(title, items.length);
-    if (seen.has(fallbackKey)) continue;
-    seen.add(fallbackKey);
-
-    const link = container.querySelector('a[href*="/details/"]');
+    if (title.toLowerCase() === "featured job posts") continue;
+    const link =
+      container.querySelector('a[href*="/jobs/"]') ||
+      container.querySelector('a[href*="/details/"]') ||
+      container.querySelector("h1 a, h2 a, h3 a, h4 a, a");
     const href = link?.getAttribute("href") || null;
     const jobUrl = href ? new URL(href, doc.baseURI).toString() : null;
     const jobId = parseJobIdFromUrl(jobUrl);
+    const fallbackKey = buildFallbackKeyFromTitle(title, items.length);
     const jobKey = buildJobKey({ jobId, jobUrl }) || fallbackKey;
+    if (seen.has(jobKey)) continue;
+    seen.add(jobKey);
     const budget = findFirstMatch(text, /\$[0-9.,]+(?:\s*-\s*\$[0-9.,]+)?/);
     const posted = findFirstMatch(
       text,
@@ -149,13 +162,11 @@ function extractCardsFallback(doc) {
 }
 
 export function extractListItemsFromDocument(doc) {
-  const anchorsA1 = Array.from(
-    doc.querySelectorAll('a[href*="/nx/find-work/best-matches/details/"]')
+  const anchorsA1 = Array.from(doc.querySelectorAll('a[href*="/jobs/"]'));
+  const anchorsA2 = Array.from(
+    doc.querySelectorAll('a[href*="/nx/find-work/best-matches/details/"], a[href*="/details/"]')
   );
-  const anchors =
-    anchorsA1.length > 0
-      ? anchorsA1
-      : Array.from(doc.querySelectorAll('a[href*="/details/"]'));
+  const anchors = anchorsA1.length > 0 ? anchorsA1 : anchorsA2;
 
   const items = [];
   const seen = new Set();

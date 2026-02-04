@@ -15,6 +15,9 @@ describe("parser", () => {
     const encodedUrl =
       "https://www.upwork.com/nx/find-work/best-matches/details/%7E022018254936864221677?pageTitle=Job%20Details";
     expect(parseJobIdFromUrl(encodedUrl)).toBe("~022018254936864221677");
+    const jobsUrl =
+      "https://www.upwork.com/jobs/Backend-Developer-Build-FastAPI-Semantic-Router-Cost-Control_~022018964228810997065/?referrer_url_path=find_work_home";
+    expect(parseJobIdFromUrl(jobsUrl)).toBe("~022018964228810997065");
     expect(parseJobIdFromUrl("https://www.upwork.com")).toBe(null);
   });
 
@@ -51,6 +54,22 @@ describe("parser", () => {
     expect(items[0].posted_time_raw).toBe("5 hours ago");
     expect(items[0].proposal_count_raw).toBe("Proposals: Less than 5");
     expect(items[0].skills_tags_raw).toEqual(["React", "Node.js"]);
+  });
+
+  it("extracts list items from /jobs links", () => {
+    const html = `
+      <section class="air3-card-section air3-card-hover">
+        <h3><a href="/jobs/Backend-Developer_~022018964228810997065/?referrer_url_path=find_work_home">Backend Developer</a></h3>
+        <div>Hourly</div>
+        <div>$30-$60</div>
+        <div>1 hour ago</div>
+      </section>
+    `;
+    const dom = new JSDOM(html, { url: "https://www.upwork.com/nx/find-work/best-matches" });
+    const items = extractListItemsFromDocument(dom.window.document);
+    expect(items.length).toBe(1);
+    expect(items[0].job_id).toBe("~022018964228810997065");
+    expect(items[0].job_url).toContain("/jobs/Backend-Developer_~022018964228810997065/");
   });
 
   it("extracts detail fields from slider", () => {
@@ -104,6 +123,27 @@ describe("parser", () => {
     expect(items.length).toBe(1);
     expect(items[0].title).toBe("Build Chrome Extension");
     expect(items[0].job_key.startsWith("card_")).toBe(true);
+  });
+
+  it("dedupes nested fallback cards for the same job link", () => {
+    const html = `
+      <div class="feeds-card">
+        <div>
+          <section class="air3-card-section air3-card-hover">
+            <div>
+              <h3><a href="/jobs/Backend-Developer_~022018964228810997065/">Backend Developer</a></h3>
+              <div>Hourly</div>
+              <div>$30-$60</div>
+              <div>1 hour ago</div>
+            </div>
+          </section>
+        </div>
+      </div>
+    `;
+    const dom = new JSDOM(html, { url: "https://www.upwork.com/nx/find-work/best-matches" });
+    const items = extractListItemsFromDocument(dom.window.document);
+    expect(items.length).toBe(1);
+    expect(items[0].job_id).toBe("~022018964228810997065");
   });
 
   it("ignores detail-panel links when extracting list items", () => {

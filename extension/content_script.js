@@ -328,6 +328,19 @@
       }
       const record = jobsByKey[jobKey];
       if (!record) continue;
+      const readyForNext = await ensureDetailClosed(selectors, storageKeys);
+      if (!readyForNext) {
+        await recordError(storageKeys, {
+          error_code: "DETAIL_SLIDER_CLOSE_FAILED",
+          error_message_en: "Cannot close previous detail slider",
+          error_message_zh: "无法关闭前一个详情面板",
+          step: "DETAIL_CLOSE",
+          url: location.href,
+          selector_hint: JSON.stringify({ strategy: "C1/C2/C3", field: "slider_close" }),
+          job_key: record.job_key,
+        });
+        return finishRun("STOPPED", storageKeys, "DETAIL_SLIDER_CLOSE_FAILED");
+      }
 
       const openMethod = openDetailForRecord(record, i);
       await recordEvent(storageKeys, {
@@ -403,14 +416,14 @@
       updateView();
 
       const closeBtn = selectors.findCloseButton(slider);
-      if (closeBtn) closeBtn.click();
-      else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      if (closeBtn) safeClick(closeBtn);
+      else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       await recordEvent(storageKeys, {
         event_code: "DETAIL_CLOSED",
         step: "DETAIL_CLOSE",
         job_key: record.job_key,
       });
-      await sleep(300);
+      await ensureDetailClosed(selectors, storageKeys);
     }
     return "DETAIL_DONE";
   }
@@ -420,6 +433,7 @@
     const anchors = Array.from(document.querySelectorAll("a"));
     const decodedUrl = safeDecode(url);
     return anchors.find((a) => {
+      if (isInsideOpenedSlider(a)) return false;
       const href = a.getAttribute("href");
       if (!href) return false;
       const abs = safeAbsUrl(href);
@@ -442,6 +456,7 @@
       )
     );
     for (const el of candidates) {
+      if (isInsideOpenedSlider(el)) continue;
       const text = normalizeText(
         el.querySelector("h1, h2, h3, h4, a")?.textContent || ""
       ).toLowerCase();
@@ -462,9 +477,14 @@
     }
 
     if (record.job_id) {
-      const byId = Array.from(document.querySelectorAll('a[href*="/details/"]')).find((a) =>
-        safeDecode(safeAbsUrl(a.getAttribute("href") || "")).includes(record.job_id)
-      );
+      const byId = Array.from(document.querySelectorAll("a")).find((a) => {
+        if (isInsideOpenedSlider(a)) return false;
+        const href = a.getAttribute("href") || "";
+        if (!href) return false;
+        const decoded = safeDecode(safeAbsUrl(href));
+        if (!decoded.includes(record.job_id)) return false;
+        return decoded.includes("/jobs/") || decoded.includes("/details/");
+      });
       if (byId) {
         safeClick(byId);
         return { ok: true, strategy: "JOB_ID_LINK" };
@@ -489,10 +509,15 @@
       document.querySelectorAll(
         '[data-test*="job"], [class*="job-tile"], article, li[data-test*="job"], div[data-ev-label*="job"]'
       )
-    );
+    ).filter((el) => !isInsideOpenedSlider(el));
     if (index >= candidates.length) return false;
     safeClick(candidates[index]);
     return true;
+  }
+
+  function isInsideOpenedSlider(el) {
+    if (!el) return false;
+    return Boolean(el.closest(".air3-slider-job-details, [role='dialog'], [aria-modal='true']"));
   }
 
   function safeClick(el) {
@@ -570,6 +595,47 @@
       await sleep(300);
     }
     return null;
+  }
+
+  async function ensureDetailClosed(selectors, storageKeys) {
+    const hasDetailUrl = () => safeDecode(location.href).includes("/details/");
+    const hasSlider = () => Boolean(selectors.findSliderContainer(document).container);
+    if (!hasDetailUrl() && !hasSlider()) return true;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const slider = selectors.findSliderContainer(document).container;
+      const closeBtn = selectors.findCloseButton(slider || document.body);
+      if (closeBtn) {
+        safeClick(closeBtn);
+      } else {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      }
+      const closed = await waitForCloseState(selectors, 1200);
+      if (closed) return true;
+      if (hasDetailUrl()) {
+        history.back();
+        await recordEvent(storageKeys, {
+          event_code: "DETAIL_CLOSE_HISTORY_BACK",
+          step: "DETAIL_CLOSE",
+          details: { attempt: attempt + 1 },
+        });
+        const backClosed = await waitForCloseState(selectors, 2000);
+        if (backClosed) return true;
+      }
+    }
+
+    return !hasDetailUrl() && !hasSlider();
+  }
+
+  async function waitForCloseState(selectors, timeoutMs) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const hasDetailUrl = safeDecode(location.href).includes("/details/");
+      const hasSlider = Boolean(selectors.findSliderContainer(document).container);
+      if (!hasDetailUrl && !hasSlider) return true;
+      await sleep(150);
+    }
+    return false;
   }
 
   async function recordDetailFailure(storageKeys, record, errorCode) {

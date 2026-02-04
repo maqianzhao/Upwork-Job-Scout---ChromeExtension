@@ -95,7 +95,16 @@ export function findDetailContentContainer(doc) {
 
 export function findCloseButton(container) {
   if (!container) return null;
-  return container.querySelector('button[aria-label*="Close"]');
+  const closeByAria =
+    container.querySelector('button[aria-label*="Close" i]') ||
+    container.querySelector('button[data-test*="close" i]');
+  if (closeByAria) return closeByAria;
+  const buttons = Array.from(container.querySelectorAll("button, a[role='button']"));
+  const back = buttons.find((btn) => {
+    const text = normalizeText(btn.textContent || "").toLowerCase();
+    return text === "back" || text === "go back";
+  });
+  return back || null;
 }
 
 export function detectAuthChallenge(doc, url) {
