@@ -1,0 +1,81 @@
+.ujsc-capsule {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2147483647;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid #333;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ujsc-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6b7280;
+}
+
+.ujsc-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 72px;
+  width: 340px;
+  max-height: 70vh;
+  overflow: auto;
+  z-index: 2147483647;
+  background: #0f0f10;
+  color: #fff;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 12px;
+  display: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+}
+
+.ujsc-panel h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+
+.ujsc-row {
+  margin: 8px 0;
+}
+
+.ujsc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ujsc-actions button {
+  background: #1f2937;
+  color: #fff;
+  border: 1px solid #374151;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.ujsc-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ujsc-input {
+  width: 100%;
+  padding: 6px 8px;
+  background: #111827;
+  color: #fff;
+  border: 1px solid #374151;
+  border-radius: 6px;
+}
+
