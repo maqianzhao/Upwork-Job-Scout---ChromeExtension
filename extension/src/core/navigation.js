@@ -3,6 +3,20 @@ export function isBestMatchesPath(pathname) {
   return pathname.startsWith("/nx/find-work/best-matches");
 }
 
+export function isDetailsPath(pathname) {
+  return pathname?.includes("/details/");
+}
+
+export function isJobsPath(pathname) {
+  return pathname?.includes("/jobs/");
+}
+
+export function getDetailMode(pathname) {
+  if (isDetailsPath(pathname)) return "details";
+  if (isJobsPath(pathname)) return "jobs";
+  return null;
+}
+
 export function normalizeOrigin(origin) {
   if (!origin || typeof origin !== "string") return null;
   try {

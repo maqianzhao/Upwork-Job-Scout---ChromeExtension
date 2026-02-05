@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   isBestMatchesPath,
+  isDetailsPath,
+  isJobsPath,
+  getDetailMode,
   buildDetailsUrl,
   buildBestMatchesUrl,
   normalizeOrigin,
@@ -40,5 +43,20 @@ describe("navigation", () => {
       "https://www.upwork.com/nx/find-work/best-matches"
     );
     expect(buildBestMatchesUrl("")).toBe(null);
+  });
+
+  it("detects details/jobs path", () => {
+    expect(isDetailsPath("/nx/find-work/best-matches/details/~02")).toBe(true);
+    expect(isDetailsPath("/jobs/Backend_~02/")).toBe(false);
+    expect(isJobsPath("/jobs/Backend_~02/")).toBe(true);
+    expect(isJobsPath("/nx/find-work/best-matches/details/~02")).toBe(false);
+  });
+
+  it("returns detail mode for path", () => {
+    expect(getDetailMode("/nx/find-work/best-matches/details/~02")).toBe(
+      "details"
+    );
+    expect(getDetailMode("/jobs/Backend_~02/")).toBe("jobs");
+    expect(getDetailMode("/nx/find-work/best-matches")).toBe(null);
   });
 });
