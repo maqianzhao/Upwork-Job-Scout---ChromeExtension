@@ -58,8 +58,8 @@ npm test
 - 详情解析增强：优先从 `job-details-content` / `air3-slider-content` 提取描述
 - 详情补全 list 字段：当列表为空时，从详情文本中回填 `Budget/Rate`、`Proposals`、`job_type`、`posted_time`
 - “About the client” 标题不再要求 h 标签，支持普通 div 文本
-- 点击详情优先走 `/details/` 链接，避免误点 `/jobs/` 导航到独立详情页
-- 当仅有 `job_id` 时，直接构造 `/details/` URL 打开右侧滑窗，避免跳转到 `/jobs`
+- 点击详情优先触发卡片容器点击以打开右侧 slider，避免误点 `/jobs/` 导航到独立详情页
+- `/details` 的 pushState 仅在 URL 含 `_modalInfo` 时启用，避免“URL 变化但 UI 不变”
 - 若仍跳转到 `/jobs/` 独立详情页，会在详情就绪后解析并自动返回 Best matches 继续下一条
 - 支持动态识别当前是否为 Best matches 页面，离开时显示 Not supported
 - 列表提取优先使用 `/details/` 链接，避免 `job_url` 退化为 `/jobs`
