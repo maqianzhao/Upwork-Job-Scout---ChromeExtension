@@ -72,6 +72,25 @@ describe("parser", () => {
     expect(items[0].job_url).toContain("/jobs/Backend-Developer_~022018964228810997065/");
   });
 
+  it("ignores saved jobs navigation links", () => {
+    const html = `
+      <nav>
+        <a href="/nx/search/jobs/saved/">Saved jobs</a>
+      </nav>
+      <section class="air3-card-section air3-card-hover">
+        <h3><a href="/jobs/Backend-Developer_~022018964228810997065/">Backend Developer</a></h3>
+        <div>Hourly</div>
+        <div>$30-$60</div>
+        <div>1 hour ago</div>
+      </section>
+    `;
+    const dom = new JSDOM(html, { url: "https://www.upwork.com/nx/find-work/best-matches" });
+    const items = extractListItemsFromDocument(dom.window.document);
+    expect(items.length).toBe(1);
+    expect(items[0].job_id).toBe("~022018964228810997065");
+    expect(items[0].job_url).toContain("/jobs/Backend-Developer_~022018964228810997065/");
+  });
+
   it("extracts detail fields from slider", () => {
     const html = `
       <div role="dialog">

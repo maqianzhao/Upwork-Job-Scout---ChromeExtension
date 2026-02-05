@@ -129,6 +129,7 @@ function extractCardsFallback(doc) {
     const href = link?.getAttribute("href") || null;
     const jobUrl = href ? new URL(href, doc.baseURI).toString() : null;
     const jobId = parseJobIdFromUrl(jobUrl);
+    if (link && !jobId) continue;
     const fallbackKey = buildFallbackKeyFromTitle(title, items.length);
     const jobKey = buildJobKey({ jobId, jobUrl }) || fallbackKey;
     if (seen.has(jobKey)) continue;
@@ -176,7 +177,8 @@ export function extractListItemsFromDocument(doc) {
     if (!href) continue;
     const jobUrl = new URL(href, doc.baseURI).toString();
     const jobId = parseJobIdFromUrl(jobUrl);
-    const jobKey = buildJobKey({ jobId, jobUrl });
+    if (!jobId) continue;
+    const jobKey = jobId;
     if (!jobKey) continue;
     if (seen.has(jobKey)) continue;
     const container = link.closest("article, section, li, div") || link.parentElement;

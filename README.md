@@ -51,5 +51,6 @@ npm test
 - 详情就绪判定增加 URL + 描述长度校验，并在等待期内自动重试点击，减少“1 秒完成但无有效数据”的误判
 - 新增对 Upwork `/jobs/..._~jobId` 链接解析，列表项 `job_id` 提取更稳定
 - 详情关闭链路增强：Close/Back/Escape/history.back 多级兜底，避免卡在首条详情导致后续无法点击
+- 列表链接过滤：忽略 `/nx/search/jobs/saved/` 等非职位链接，避免误跳转到收藏页
 
 详细规范请查看：`PRD-browser-extension-v0.4.md`
