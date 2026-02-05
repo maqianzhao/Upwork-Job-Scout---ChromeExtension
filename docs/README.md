@@ -27,6 +27,7 @@
 - 列表提取过滤详情面板节点，避免误提取导致“秒完成但无真实列表数据”。
 - 详情就绪判定增强：标题+Summary+About the client+时薪/固定价都就绪才继续，最长等待 30 秒；等待期间自动重试点击详情。
 - 运行中拦截 `/jobs` 链接并转换为 `/details` 打开，避免连续跳转。
+- Start 时若已在 `/details` 页面，会自动回到 Best matches 并继续本次 run。
 - 基于真实探针结果适配 Upwork 新链路：支持从 `/jobs/..._~jobId` 提取 `job_id`。
 - 增强详情面板关闭策略（Close/Back/Escape/history.back），降低“只采到首条后卡住”的失败率。
 - 过滤非职位链接（如 `/nx/search/jobs/saved/`），避免 Start 后误跳转收藏页。

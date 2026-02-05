@@ -72,6 +72,12 @@
     });
 
     overlayApi.updateView(state);
+
+    const pending = Number(sessionStorage.getItem("ujsc_autostart") || 0);
+    if (pending) {
+      sessionStorage.removeItem("ujsc_autostart");
+      startRun(pending, parser, selectors, storageKeys);
+    }
   }
 
   function installNavGuard() {
@@ -183,6 +189,21 @@
   async function startRun(maxItems, parser, selectors, storageKeys) {
     if (!isSupported()) return;
     if (state.status === "RUNNING_LIST" || state.status === "RUNNING_DETAIL") return;
+
+    if (location.pathname.includes("/details/")) {
+      const baseUrl = navRef?.buildBestMatchesUrl
+        ? navRef.buildBestMatchesUrl(location.origin)
+        : null;
+      try {
+        sessionStorage.setItem("ujsc_autostart", String(maxItems || 30));
+      } catch {
+        // ignore storage failure
+      }
+      if (baseUrl) {
+        location.href = baseUrl;
+        return;
+      }
+    }
 
     state.max_items = maxItems || 30;
     state.stopRequested = false;

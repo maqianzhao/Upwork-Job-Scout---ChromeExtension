@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { isBestMatchesPath, buildDetailsUrl, normalizeOrigin } from "../extension/src/core/navigation.js";
+import {
+  isBestMatchesPath,
+  buildDetailsUrl,
+  buildBestMatchesUrl,
+  normalizeOrigin,
+} from "../extension/src/core/navigation.js";
 
 describe("navigation", () => {
   it("detects best matches paths", () => {
@@ -25,5 +30,15 @@ describe("navigation", () => {
     expect(normalizeOrigin("https://upwork.com")).toBe("https://www.upwork.com");
     expect(normalizeOrigin("https://www.upwork.com")).toBe("https://www.upwork.com");
     expect(normalizeOrigin("not-a-url")).toBe(null);
+  });
+
+  it("builds best matches url from origin", () => {
+    expect(buildBestMatchesUrl("http://upwork.com")).toBe(
+      "https://www.upwork.com/nx/find-work/best-matches"
+    );
+    expect(buildBestMatchesUrl("https://upwork.com")).toBe(
+      "https://www.upwork.com/nx/find-work/best-matches"
+    );
+    expect(buildBestMatchesUrl("")).toBe(null);
   });
 });

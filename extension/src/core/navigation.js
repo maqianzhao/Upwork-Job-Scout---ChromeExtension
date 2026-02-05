@@ -27,3 +27,9 @@ export function buildDetailsUrl(origin, jobId) {
     return null;
   }
 }
+
+export function buildBestMatchesUrl(origin) {
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) return null;
+  return `${normalized}/nx/find-work/best-matches`;
+}

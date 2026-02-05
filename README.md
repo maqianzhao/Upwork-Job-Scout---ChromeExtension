@@ -50,6 +50,7 @@ npm test
 - 列表提取会跳过已打开详情面板内的链接，避免误把详情链接当作列表项
 - 详情就绪判定：需标题+Summary+About the client+时薪/固定价均就绪，最长等待 30 秒，等待期内自动重试点击
 - 运行中若点击到 `/jobs` 链接，将拦截并改为 `/details` 打开，避免连续跳转
+- 若 Start 时已在 `/details` 页面，将自动回到 Best matches 并继续本次 run
 - 新增对 Upwork `/jobs/..._~jobId` 链接解析，列表项 `job_id` 提取更稳定
 - 详情关闭链路增强：Close/Back/Escape/history.back 多级兜底，避免卡在首条详情导致后续无法点击
 - 列表链接过滤：忽略 `/nx/search/jobs/saved/` 等非职位链接，避免误跳转到收藏页
