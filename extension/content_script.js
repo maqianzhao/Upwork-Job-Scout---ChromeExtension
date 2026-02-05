@@ -421,7 +421,8 @@
         () => openDetailForRecord(record, i)
       );
       if (!slider) {
-        if (!isSupported() && location.pathname.includes("/jobs/")) {
+        const detailMode = navRef?.getDetailMode ? navRef.getDetailMode(location.pathname) : null;
+        if (!isSupported() && !detailMode) {
           state.last_error = "已跳转到 /jobs 页面，无法在 Best matches 内打开详情";
           await recordError(storageKeys, {
             error_code: "DETAIL_NAVIGATED_AWAY",
@@ -509,6 +510,25 @@
       await persistJobs(storageKeys);
       await updateMeta(storageKeys);
       updateView();
+
+      const detailMode = navRef?.getDetailMode ? navRef.getDetailMode(location.pathname) : null;
+      if (detailMode === "jobs") {
+        const baseUrl = navRef?.buildBestMatchesUrl
+          ? navRef.buildBestMatchesUrl(location.origin)
+          : null;
+        if (baseUrl) {
+          location.href = baseUrl;
+        } else {
+          history.back();
+        }
+        await recordEvent(storageKeys, {
+          event_code: "DETAIL_RETURNED_TO_LIST",
+          step: "DETAIL_CLOSE",
+          job_key: record.job_key,
+        });
+        await waitForInitialListOrButton(parser, selectors, 30000);
+        continue;
+      }
 
       const closeBtn = selectors.findCloseButton(slider);
       if (closeBtn) safeClick(closeBtn);
@@ -728,21 +748,40 @@
     const start = Date.now();
     let lastRetry = start;
     while (Date.now() - start < timeoutMs) {
-      const { container } = selectors.findSliderContainer(document);
-      if (container && isDetailUrlReady(record)) {
-        const detail = parser.extractDetailFromSlider(container);
-        const meta = parser.extractDetailMetaFromSlider(container);
-        const readiness = parser.evaluateDetailReadiness
-          ? parser.evaluateDetailReadiness(detail, meta)
-          : { ready: Boolean(detail?.description_full), missing: [] };
-        if (readiness.ready) {
-          lastDetailMissing = null;
-          return container;
+      const detailMode = navRef?.getDetailMode ? navRef.getDetailMode(location.pathname) : null;
+      if (detailMode === "details") {
+        const slider = selectors.findSliderContainer(document);
+        if (slider.container && isDetailUrlReady(record)) {
+          const detail = parser.extractDetailFromSlider(slider.container);
+          const meta = parser.extractDetailMetaFromSlider(slider.container);
+          const readiness = parser.evaluateDetailReadiness
+            ? parser.evaluateDetailReadiness(detail, meta)
+            : { ready: Boolean(detail?.description_full), missing: [] };
+          if (readiness.ready) {
+            lastDetailMissing = null;
+            return slider.container;
+          }
+          lastDetailMissing = readiness.missing;
         }
-        lastDetailMissing = readiness.missing;
-      }
-      if (isDetailUrlReady(record) && location.href.includes("/details/")) {
-        const fallback = selectors.findDetailContentContainer(document);
+        if (isDetailUrlReady(record)) {
+          const fallback = selectors.findDetailContentContainer(document);
+          if (fallback.container) {
+            const detail = parser.extractDetailFromSlider(fallback.container);
+            const meta = parser.extractDetailMetaFromSlider(fallback.container);
+            const readiness = parser.evaluateDetailReadiness
+              ? parser.evaluateDetailReadiness(detail, meta)
+              : { ready: Boolean(detail?.description_full), missing: [] };
+            if (readiness.ready) {
+              lastDetailMissing = null;
+              return fallback.container;
+            }
+            lastDetailMissing = readiness.missing;
+          }
+        }
+      } else if (detailMode === "jobs") {
+        const fallback = selectors.getDetailContainer
+          ? selectors.getDetailContainer(document, "jobs")
+          : selectors.findDetailContentContainer(document);
         if (fallback.container) {
           const detail = parser.extractDetailFromSlider(fallback.container);
           const meta = parser.extractDetailMetaFromSlider(fallback.container);
@@ -752,6 +791,20 @@
           if (readiness.ready) {
             lastDetailMissing = null;
             return fallback.container;
+          }
+          lastDetailMissing = readiness.missing;
+        }
+      } else {
+        const slider = selectors.findSliderContainer(document);
+        if (slider.container && isDetailUrlReady(record)) {
+          const detail = parser.extractDetailFromSlider(slider.container);
+          const meta = parser.extractDetailMetaFromSlider(slider.container);
+          const readiness = parser.evaluateDetailReadiness
+            ? parser.evaluateDetailReadiness(detail, meta)
+            : { ready: Boolean(detail?.description_full), missing: [] };
+          if (readiness.ready) {
+            lastDetailMissing = null;
+            return slider.container;
           }
           lastDetailMissing = readiness.missing;
         }

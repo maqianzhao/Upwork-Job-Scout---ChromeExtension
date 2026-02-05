@@ -106,6 +106,12 @@ export function findDetailContentContainer(doc) {
   return { container: best, strategy: "D1" };
 }
 
+export function getDetailContainer(doc, mode) {
+  if (mode === "details") return findSliderContainer(doc);
+  if (mode === "jobs") return findDetailContentContainer(doc);
+  return { container: null, strategy: null };
+}
+
 export function findCloseButton(container) {
   if (!container) return null;
   const closeByAria =

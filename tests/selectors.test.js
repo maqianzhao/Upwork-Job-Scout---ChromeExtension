@@ -6,6 +6,7 @@ import {
   findSliderContainer,
   findDetailContentContainer,
   findCloseButton,
+  getDetailContainer,
 } from "../extension/src/core/selectors.js";
 
 describe("selectors", () => {
@@ -85,5 +86,21 @@ describe("selectors", () => {
     const btn = findCloseButton(slider);
     expect(btn).not.toBe(null);
     expect(btn.textContent).toContain("Go Back");
+  });
+
+  it("returns detail container based on mode", () => {
+    const detailsDom = new JSDOM(`<div role="dialog">Job Details</div>`);
+    const details = getDetailContainer(detailsDom.window.document, "details");
+    expect(details.container).not.toBe(null);
+
+    const jobsDom = new JSDOM(`
+      <main>
+        <section class="job-details">
+          About the client: Payment method verified. Summary text for detail container.
+        </section>
+      </main>
+    `);
+    const jobs = getDetailContainer(jobsDom.window.document, "jobs");
+    expect(jobs.container).not.toBe(null);
   });
 });
