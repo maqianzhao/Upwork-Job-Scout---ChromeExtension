@@ -88,23 +88,19 @@
         if (!["RUNNING_LIST", "RUNNING_DETAIL", "STOPPING"].includes(state.status)) return;
         const target = event.target;
         if (!target || typeof target.closest !== "function") return;
-        const anchor = target.closest("a");
-        if (!anchor) return;
-        const href = anchor.getAttribute("href") || "";
-        if (!parserRef.isJobsHref(href)) return;
-        const abs = safeAbsUrl(href);
-        const jobId = parserRef.parseJobIdFromUrl(abs);
-        if (!jobId) return;
-        const detailsUrl = navRef.buildDetailsUrl("https://www.upwork.com", jobId);
-        if (!detailsUrl) return;
-        event.preventDefault();
-        event.stopPropagation();
-        history.pushState({}, "", detailsUrl);
-        window.dispatchEvent(new PopStateEvent("popstate"));
-      },
-      true
-    );
-  }
+      const anchor = target.closest("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") || "";
+      if (!parserRef.isJobsHref(href)) return;
+      const container = anchor.closest("article, section, li, div");
+      if (!container || isInsideOpenedSlider(container)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      safeClick(container);
+    },
+    true
+  );
+}
 
   function injectCss() {
     const link = document.createElement("link");
