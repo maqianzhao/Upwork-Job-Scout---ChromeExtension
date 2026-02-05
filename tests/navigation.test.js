@@ -66,11 +66,11 @@ describe("navigation", () => {
 
   it("returns detail open strategy order", () => {
     expect(getDetailOpenStrategyOrder()).toEqual([
-      "DETAILS_URL_PUSHSTATE",
-      "URL_LINK",
-      "JOB_ID_LINK",
       "TITLE_CARD",
       "INDEX_CARD",
+      "URL_LINK",
+      "JOB_ID_LINK",
+      "DETAILS_URL_PUSHSTATE",
     ]);
   });
 

@@ -587,11 +587,7 @@
       ).toLowerCase();
       if (!text) continue;
       if (text.includes(target) || target.includes(text)) {
-        const link =
-          el.querySelector('a[href*="/details/"]') ||
-          el.querySelector('a[href*="/jobs/"]') ||
-          el.querySelector("a");
-        safeClick(link || el);
+        safeClick(el);
         return true;
       }
     }
@@ -686,11 +682,7 @@
     ).filter((el) => !isInsideOpenedSlider(el));
     if (index >= candidates.length) return false;
     const el = candidates[index];
-    const link =
-      el.querySelector('a[href*="/details/"]') ||
-      el.querySelector('a[href*="/jobs/"]') ||
-      el.querySelector("a");
-    safeClick(link || el);
+    safeClick(el);
     return true;
   }
 

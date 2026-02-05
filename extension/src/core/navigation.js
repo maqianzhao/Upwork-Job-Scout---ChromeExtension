@@ -21,11 +21,11 @@ export function getDetailMode(pathname) {
 
 export function getDetailOpenStrategyOrder() {
   return [
-    "DETAILS_URL_PUSHSTATE",
-    "URL_LINK",
-    "JOB_ID_LINK",
     "TITLE_CARD",
     "INDEX_CARD",
+    "URL_LINK",
+    "JOB_ID_LINK",
+    "DETAILS_URL_PUSHSTATE",
   ];
 }
 
