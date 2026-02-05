@@ -56,5 +56,6 @@ npm test
 - 详情解析增强：优先从 `job-details-content` / `air3-slider-content` 提取描述
 - 详情补全 list 字段：当列表为空时，从详情文本中回填 `Budget/Rate`、`Proposals`、`job_type`、`posted_time`
 - “About the client” 标题不再要求 h 标签，支持普通 div 文本
+- 点击详情优先走 `/details/` 链接，避免误点 `/jobs/` 导航到独立详情页
 
 详细规范请查看：`PRD-browser-extension-v0.4.md`

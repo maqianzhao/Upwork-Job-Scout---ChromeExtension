@@ -33,3 +33,4 @@
 - 详情解析优先读取 `job-details-content` / `air3-slider-content`，减少空描述。
 - 详情补全 list 字段：在 list 缺失时，从详情文本回填 `Budget/Rate`、`Proposals`、`job_type`、`posted_time`。
 - “About the client” 支持非标题元素文本识别。
+- 详情打开策略只点击 `/details/` 链接，避免跳转 `/jobs/` 独立详情页。

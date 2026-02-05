@@ -14,6 +14,18 @@ export function parseJobIdFromUrl(url) {
   return jobsSlugMatch ? jobsSlugMatch[1] : null;
 }
 
+export function isDetailsHref(href) {
+  if (!href) return false;
+  const value = String(href);
+  return value.includes("/details/");
+}
+
+export function isJobsHref(href) {
+  if (!href) return false;
+  const value = String(href);
+  return value.includes("/jobs/");
+}
+
 export function buildJobKey({ jobId, jobUrl }) {
   if (jobId) return jobId;
   if (jobUrl) return jobUrl;

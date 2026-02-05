@@ -29,6 +29,7 @@
   let events = [];
   let storageKeysRef = null;
   let logRef = null;
+  let parserRef = null;
 
   async function init() {
     let overlayModule;
@@ -50,6 +51,7 @@
 
     storageKeysRef = storageKeys;
     logRef = logUtils;
+    parserRef = parser;
     overlayApi = createOverlay({
       onStart: (maxItems) => startRun(maxItems, parser, selectors, storageKeys),
       onStop: () => requestStop(),
@@ -447,7 +449,7 @@
     return "DETAIL_DONE";
   }
 
-  function findLinkByUrl(url) {
+  function findLinkByUrl(url, parser) {
     if (!url) return null;
     const anchors = Array.from(document.querySelectorAll("a"));
     const decodedUrl = safeDecode(url);
@@ -455,6 +457,7 @@
       if (isInsideOpenedSlider(a)) return false;
       const href = a.getAttribute("href");
       if (!href) return false;
+      if (!parser.isDetailsHref(href)) return false;
       const abs = safeAbsUrl(href);
       const decodedHref = safeDecode(abs);
       return (
@@ -489,7 +492,7 @@
   }
 
   function openDetailForRecord(record, index) {
-    const byUrl = findLinkByUrl(record.job_url);
+    const byUrl = record.job_url ? findLinkByUrl(record.job_url, parserRef) : null;
     if (byUrl) {
       safeClick(byUrl);
       return { ok: true, strategy: "URL_LINK" };
@@ -500,9 +503,10 @@
         if (isInsideOpenedSlider(a)) return false;
         const href = a.getAttribute("href") || "";
         if (!href) return false;
+        if (!parserRef.isDetailsHref(href)) return false;
         const decoded = safeDecode(safeAbsUrl(href));
         if (!decoded.includes(record.job_id)) return false;
-        return decoded.includes("/jobs/") || decoded.includes("/details/");
+        return decoded.includes("/details/");
       });
       if (byId) {
         safeClick(byId);

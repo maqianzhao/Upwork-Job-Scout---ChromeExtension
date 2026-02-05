@@ -6,6 +6,8 @@ import {
   extractListItemsFromDocument,
   extractDetailFromSlider,
   extractDetailMetaFromSlider,
+  isDetailsHref,
+  isJobsHref,
 } from "../extension/src/core/parser.js";
 
 describe("parser", () => {
@@ -20,6 +22,13 @@ describe("parser", () => {
       "https://www.upwork.com/jobs/Backend-Developer-Build-FastAPI-Semantic-Router-Cost-Control_~022018964228810997065/?referrer_url_path=find_work_home";
     expect(parseJobIdFromUrl(jobsUrl)).toBe("~022018964228810997065");
     expect(parseJobIdFromUrl("https://www.upwork.com")).toBe(null);
+  });
+
+  it("detects jobs/details href types", () => {
+    expect(isDetailsHref("/nx/find-work/best-matches/details/~02")).toBe(true);
+    expect(isDetailsHref("/jobs/Backend_~02/")).toBe(false);
+    expect(isJobsHref("/jobs/Backend_~02/")).toBe(true);
+    expect(isJobsHref("/nx/find-work/best-matches/details/~02")).toBe(false);
   });
 
   it("builds job_key preferring job_id", () => {
