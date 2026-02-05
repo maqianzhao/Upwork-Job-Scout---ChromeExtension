@@ -225,28 +225,33 @@ function extractSectionText(container, headingRegex) {
 
 export function extractDetailFromSlider(slider) {
   if (!slider) return null;
+  const detailRoot =
+    slider.querySelector(".job-details-content") ||
+    slider.querySelector(".air3-slider-content") ||
+    slider.querySelector(".air3-slider-body") ||
+    slider;
   const titleFromDetail = normalizeText(
-    slider.querySelector("h1, h2, h3, [data-test*='title']")?.textContent || ""
+    detailRoot.querySelector("h1, h2, h3, [data-test*='title']")?.textContent || ""
   );
   const explicitDescription =
-    slider.querySelector('[data-test*="description"]') ||
-    slider.querySelector('[class*="description"]');
+    detailRoot.querySelector('[data-test*="description"]') ||
+    detailRoot.querySelector('[class*="description"]');
   let descriptionFull = "";
   if (explicitDescription) {
     descriptionFull = textWithBreaks(explicitDescription);
   } else {
     const descriptionCandidates = [
-      ...slider.querySelectorAll("article, section, p"),
+      ...detailRoot.querySelectorAll("article, section, p, div"),
     ];
     descriptionFull = pickLongestText(descriptionCandidates);
   }
   if (!descriptionFull) {
-    descriptionFull = textWithBreaks(slider.querySelector("p") || slider);
+    descriptionFull = textWithBreaks(detailRoot.querySelector("p") || detailRoot);
   }
-  const deliverables = extractSectionText(slider, /Deliverables/i);
-  const skills = extractSectionText(slider, /\bSkills\b/i);
-  const client = extractSectionText(slider, /About the client|Client/i);
-  const attachments = /\bAttachments?\b/i.test(slider.textContent || "")
+  const deliverables = extractSectionText(detailRoot, /Deliverables/i);
+  const skills = extractSectionText(detailRoot, /\bSkills\b/i);
+  const client = extractSectionText(detailRoot, /About the client|Client/i);
+  const attachments = /\bAttachments?\b/i.test(detailRoot.textContent || "")
     ? "true"
     : "unknown";
 

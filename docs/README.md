@@ -29,3 +29,5 @@
 - 基于真实探针结果适配 Upwork 新链路：支持从 `/jobs/..._~jobId` 提取 `job_id`。
 - 增强详情面板关闭策略（Close/Back/Escape/history.back），降低“只采到首条后卡住”的失败率。
 - 过滤非职位链接（如 `/nx/search/jobs/saved/`），避免 Start 后误跳转收藏页。
+- 详情面板识别增强：支持 `air3-slider-job-details` / `data-test="air3-slider"`。
+- 详情解析优先读取 `job-details-content` / `air3-slider-content`，减少空描述。

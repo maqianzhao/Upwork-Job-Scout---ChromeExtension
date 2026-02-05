@@ -127,6 +127,22 @@ describe("parser", () => {
     expect(detail.description_full).toContain("much longer description block");
   });
 
+  it("extracts detail description from job-details-content", () => {
+    const html = `
+      <div class="air3-slider air3-slider-job-details">
+        <div class="air3-slider-content">
+          <div class="job-details-content">
+            This is the real job description inside job-details-content.
+          </div>
+        </div>
+      </div>
+    `;
+    const dom = new JSDOM(html);
+    const slider = dom.window.document.querySelector(".air3-slider-job-details");
+    const detail = extractDetailFromSlider(slider);
+    expect(detail.description_full).toContain("real job description");
+  });
+
   it("falls back to card extraction without details links", () => {
     const html = `
       <article class="job-tile">

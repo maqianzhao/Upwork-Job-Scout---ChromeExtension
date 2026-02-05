@@ -42,6 +42,12 @@ describe("selectors", () => {
     expect(container).not.toBe(null);
   });
 
+  it("finds air3 job details slider even without keyword text", () => {
+    const dom = new JSDOM(`<div class="air3-slider air3-slider-job-details" data-test="air3-slider">Body</div>`);
+    const { container } = findSliderContainer(dom.window.document);
+    expect(container).not.toBe(null);
+  });
+
   it("does not treat generic panel as slider container", () => {
     const dom = new JSDOM(`<div class="left-panel">Navigation panel</div>`);
     const { container } = findSliderContainer(dom.window.document);
@@ -58,6 +64,19 @@ describe("selectors", () => {
     const { container } = findDetailContentContainer(dom.window.document);
     expect(container).not.toBe(null);
     expect(container.textContent).toContain("long detail content block");
+  });
+
+  it("finds detail content container from slider content", () => {
+    const dom = new JSDOM(`
+      <div class="air3-slider-content">
+        <div class="job-details-content">
+          Details text goes here with enough length to pass visibility scoring threshold.
+        </div>
+      </div>
+    `);
+    const { container } = findDetailContentContainer(dom.window.document);
+    expect(container).not.toBe(null);
+    expect(container.textContent).toContain("Details text");
   });
 
   it("finds close button by Back text fallback", () => {

@@ -18,6 +18,10 @@ function scoreContainer(el) {
 function hasDetailSemantics(el) {
   if (!el) return false;
   const text = normalizeText(el.textContent || "").toLowerCase();
+  const explicitAir3 =
+    (el.classList && el.classList.contains("air3-slider-job-details")) ||
+    el.getAttribute("data-test") === "air3-slider";
+  if (explicitAir3) return true;
   const hasKeyword =
     text.includes("job details") ||
     text.includes("about the client") ||
@@ -60,7 +64,7 @@ export function findSliderContainer(doc) {
     doc.querySelectorAll('[role="dialog"], [aria-modal="true"]')
   )
     .filter(isVisible)
-    .filter(hasDetailSemantics);
+    .filter((el) => hasDetailSemantics(el));
   if (roleCandidates.length > 0) {
     const best = roleCandidates.sort((a, b) => scoreContainer(b) - scoreContainer(a))[0];
     return { container: best, strategy: "S1" };
@@ -72,7 +76,7 @@ export function findSliderContainer(doc) {
     )
   )
     .filter(isVisible)
-    .filter(hasDetailSemantics);
+    .filter((el) => hasDetailSemantics(el));
   if (classCandidates.length > 0) {
     const best = classCandidates.sort((a, b) => scoreContainer(b) - scoreContainer(a))[0];
     return { container: best, strategy: "S2" };
@@ -84,7 +88,16 @@ export function findSliderContainer(doc) {
 export function findDetailContentContainer(doc) {
   const candidates = Array.from(
     doc.querySelectorAll(
-      'main [data-test*="job-details"], main [class*="job-details"], main section, main article, [class*="description"]'
+      [
+        "[class*='air3-slider-content']",
+        "[class*='air3-slider-body']",
+        "[class*='job-details-content']",
+        "main [data-test*='job-details']",
+        "main [class*='job-details']",
+        "main section",
+        "main article",
+        "[class*='description']",
+      ].join(", ")
     )
   ).filter(isVisible);
   if (candidates.length === 0) return { container: null, strategy: null };

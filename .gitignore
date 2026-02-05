@@ -7,3 +7,7 @@ build/
 .env*
 coverage/
 tmp/
+docs/probes/upwork_probe_*.json
+docs/probes/upwork_probe_*.json:Zone.Identifier
+docs/probes/run_*.md
+docs/probes/run_*.md:Zone.Identifier
