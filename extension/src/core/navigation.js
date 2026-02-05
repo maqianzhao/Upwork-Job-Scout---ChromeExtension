@@ -17,6 +17,16 @@ export function getDetailMode(pathname) {
   return null;
 }
 
+export function getDetailOpenStrategyOrder() {
+  return [
+    "DETAILS_URL_PUSHSTATE",
+    "URL_LINK",
+    "JOB_ID_LINK",
+    "TITLE_CARD",
+    "INDEX_CARD",
+  ];
+}
+
 export function normalizeOrigin(origin) {
   if (!origin || typeof origin !== "string") return null;
   try {

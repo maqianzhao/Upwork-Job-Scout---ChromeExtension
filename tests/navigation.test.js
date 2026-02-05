@@ -6,6 +6,7 @@ import {
   getDetailMode,
   buildDetailsUrl,
   buildBestMatchesUrl,
+  getDetailOpenStrategyOrder,
   normalizeOrigin,
 } from "../extension/src/core/navigation.js";
 
@@ -58,5 +59,15 @@ describe("navigation", () => {
     );
     expect(getDetailMode("/jobs/Backend_~02/")).toBe("jobs");
     expect(getDetailMode("/nx/find-work/best-matches")).toBe(null);
+  });
+
+  it("returns detail open strategy order", () => {
+    expect(getDetailOpenStrategyOrder()).toEqual([
+      "DETAILS_URL_PUSHSTATE",
+      "URL_LINK",
+      "JOB_ID_LINK",
+      "TITLE_CARD",
+      "INDEX_CARD",
+    ]);
   });
 });

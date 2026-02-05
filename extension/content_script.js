@@ -579,47 +579,73 @@
   }
 
   function openDetailForRecord(record, index) {
-    const byUrl = record.job_url ? findLinkByUrl(record.job_url, parserRef) : null;
-    if (byUrl) {
-      safeClick(byUrl);
-      return { ok: true, strategy: "URL_LINK" };
+    const order = navRef?.getDetailOpenStrategyOrder
+      ? navRef.getDetailOpenStrategyOrder()
+      : ["URL_LINK", "JOB_ID_LINK", "TITLE_CARD", "INDEX_CARD", "DETAILS_URL_PUSHSTATE"];
+    for (const strategy of order) {
+      const result = openDetailWithStrategy(strategy, record, index);
+      if (result.ok) return result;
     }
-
-    if (record.job_id) {
-      const byId = Array.from(document.querySelectorAll("a")).find((a) => {
-        if (isInsideOpenedSlider(a)) return false;
-        const href = a.getAttribute("href") || "";
-        if (!href) return false;
-        if (!parserRef.isDetailsHref(href)) return false;
-        const decoded = safeDecode(safeAbsUrl(href));
-        if (!decoded.includes(record.job_id)) return false;
-        return decoded.includes("/details/");
-      });
-      if (byId) {
-        safeClick(byId);
-        return { ok: true, strategy: "JOB_ID_LINK" };
-      }
-    }
-
-    if (clickCardByTitle(record.title)) {
-      return { ok: true, strategy: "TITLE_CARD" };
-    }
-
-    const byIndex = clickCardByIndex(record.source_index ?? index);
-    if (byIndex) {
-      return { ok: true, strategy: "INDEX_CARD" };
-    }
-
-    if (record.job_id && navRef?.buildDetailsUrl) {
-      const detailsUrl = navRef.buildDetailsUrl(location.origin, record.job_id);
-      if (detailsUrl) {
-        history.pushState({}, "", detailsUrl);
-        window.dispatchEvent(new PopStateEvent("popstate"));
-        return { ok: true, strategy: "DETAILS_URL_PUSHSTATE" };
-      }
-    }
-
     return { ok: false, strategy: "NONE" };
+  }
+
+  function openDetailWithStrategy(strategy, record, index) {
+    if (strategy === "DETAILS_URL_PUSHSTATE") {
+      if (record.job_id && navRef?.buildDetailsUrl) {
+        const detailsUrl = navRef.buildDetailsUrl(location.origin, record.job_id);
+        if (detailsUrl) {
+          history.pushState({}, "", detailsUrl);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+          return { ok: true, strategy };
+        }
+      }
+      return { ok: false, strategy };
+    }
+
+    if (strategy === "URL_LINK") {
+      const byUrl = record.job_url ? findLinkByUrl(record.job_url, parserRef) : null;
+      if (byUrl) {
+        safeClick(byUrl);
+        return { ok: true, strategy };
+      }
+      return { ok: false, strategy };
+    }
+
+    if (strategy === "JOB_ID_LINK") {
+      if (record.job_id) {
+        const byId = Array.from(document.querySelectorAll("a")).find((a) => {
+          if (isInsideOpenedSlider(a)) return false;
+          const href = a.getAttribute("href") || "";
+          if (!href) return false;
+          if (!parserRef.isDetailsHref(href)) return false;
+          const decoded = safeDecode(safeAbsUrl(href));
+          if (!decoded.includes(record.job_id)) return false;
+          return decoded.includes("/details/");
+        });
+        if (byId) {
+          safeClick(byId);
+          return { ok: true, strategy };
+        }
+      }
+      return { ok: false, strategy };
+    }
+
+    if (strategy === "TITLE_CARD") {
+      if (clickCardByTitle(record.title)) {
+        return { ok: true, strategy };
+      }
+      return { ok: false, strategy };
+    }
+
+    if (strategy === "INDEX_CARD") {
+      const byIndex = clickCardByIndex(record.source_index ?? index);
+      if (byIndex) {
+        return { ok: true, strategy };
+      }
+      return { ok: false, strategy };
+    }
+
+    return { ok: false, strategy };
   }
 
   function clickCardByIndex(index) {
