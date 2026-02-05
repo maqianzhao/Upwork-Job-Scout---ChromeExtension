@@ -159,6 +159,32 @@ describe("parser", () => {
     expect(detail.client_history_detail_raw).toContain("Great client");
   });
 
+  it("extracts detail/meta from /jobs page container", () => {
+    const html = `
+      <main>
+        <h1>AI Backend Engineer Needed for On-Demand AI Solutions</h1>
+        <section class="description">We are seeking an experienced AI Backend Engineer...</section>
+        <section>
+          <h3>About the client</h3>
+          <div>Payment method verified</div>
+        </section>
+        <div>Hourly</div>
+        <div>$10.00-$30.00</div>
+        <div>Proposals: Less than 5</div>
+        <div>Posted 3 hours ago</div>
+      </main>
+    `;
+    const dom = new JSDOM(html);
+    const container = dom.window.document.querySelector("main");
+    const detail = extractDetailFromSlider(container);
+    const meta = extractDetailMetaFromSlider(container);
+    expect(detail.title_from_detail).toContain("AI Backend Engineer");
+    expect(detail.description_full.length).toBeGreaterThan(20);
+    expect(detail.client_history_detail_raw).toContain("Payment method verified");
+    expect(meta.job_type).toBe("Hourly");
+    expect(meta.budget_or_hourly_range_raw).toContain("$10.00-$30.00");
+  });
+
   it("extracts detail description from longest section fallback", () => {
     const html = `
       <div class="job-details-panel">
