@@ -54,5 +54,7 @@ npm test
 - 列表链接过滤：忽略 `/nx/search/jobs/saved/` 等非职位链接，避免误跳转到收藏页
 - 详情面板识别增强：支持 `air3-slider-job-details` / `data-test="air3-slider"`，避免面板被误判为空
 - 详情解析增强：优先从 `job-details-content` / `air3-slider-content` 提取描述
+- 详情补全 list 字段：当列表为空时，从详情文本中回填 `Budget/Rate`、`Proposals`、`job_type`、`posted_time`
+- “About the client” 标题不再要求 h 标签，支持普通 div 文本
 
 详细规范请查看：`PRD-browser-extension-v0.4.md`

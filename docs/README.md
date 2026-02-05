@@ -31,3 +31,5 @@
 - 过滤非职位链接（如 `/nx/search/jobs/saved/`），避免 Start 后误跳转收藏页。
 - 详情面板识别增强：支持 `air3-slider-job-details` / `data-test="air3-slider"`。
 - 详情解析优先读取 `job-details-content` / `air3-slider-content`，减少空描述。
+- 详情补全 list 字段：在 list 缺失时，从详情文本回填 `Budget/Rate`、`Proposals`、`job_type`、`posted_time`。
+- “About the client” 支持非标题元素文本识别。

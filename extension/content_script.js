@@ -394,10 +394,29 @@
         return finishRun("STOPPED", storageKeys, "DETAIL_PARSE_DESCRIPTION_MISSING");
       }
 
+      const detailMeta = parser.extractDetailMetaFromSlider(slider);
       Object.assign(record, detail, {
         detail_status: "ok",
         last_updated_at: nowIso(),
       });
+      if (!record.job_type && detailMeta.job_type) {
+        record.job_type = detailMeta.job_type;
+      }
+      if (!record.budget_or_hourly_range_raw && detailMeta.budget_or_hourly_range_raw) {
+        record.budget_or_hourly_range_raw = detailMeta.budget_or_hourly_range_raw;
+      }
+      if (!record.posted_time_raw && detailMeta.posted_time_raw) {
+        record.posted_time_raw = detailMeta.posted_time_raw;
+      }
+      if (!record.proposal_count_raw && detailMeta.proposal_count_raw) {
+        record.proposal_count_raw = detailMeta.proposal_count_raw;
+      }
+      if (
+        (!record.skills_tags_raw || record.skills_tags_raw.length === 0) &&
+        detail.required_skills_detail_raw
+      ) {
+        record.skills_tags_raw = detail.required_skills_detail_raw;
+      }
       if (!record.job_url && location.href.includes("/details/")) {
         record.job_url = location.href;
       }

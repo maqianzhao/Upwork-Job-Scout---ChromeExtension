@@ -25,6 +25,16 @@ function normalizeText(text) {
   return text.replace(/\s+/g, " ").trim();
 }
 
+function resolveDetailRoot(slider) {
+  if (!slider) return null;
+  return (
+    slider.querySelector(".job-details-content") ||
+    slider.querySelector(".air3-slider-content") ||
+    slider.querySelector(".air3-slider-body") ||
+    slider
+  );
+}
+
 function textWithBreaks(element) {
   if (!element) return "";
   const clone = element.cloneNode(true);
@@ -215,21 +225,34 @@ export function extractListItemsFromDocument(doc) {
   return extractCardsFallback(doc);
 }
 
+function findHeadingElement(container, headingRegex) {
+  const candidates = Array.from(
+    container.querySelectorAll("h1, h2, h3, h4, h5, h6, div, span, strong, b, p")
+  );
+  return candidates.find((el) => {
+    const text = normalizeText(el.textContent || "");
+    if (!text || text.length > 60) return false;
+    return headingRegex.test(text);
+  });
+}
+
 function extractSectionText(container, headingRegex) {
-  const headings = Array.from(container.querySelectorAll("h1, h2, h3, h4"));
-  const heading = headings.find((h) => headingRegex.test(h.textContent || ""));
+  const heading = findHeadingElement(container, headingRegex);
   if (!heading) return null;
-  const section = heading.parentElement;
+  let section = heading.closest("section, article") || heading.parentElement;
+  const headingText = normalizeText(heading.textContent || "");
+  if (section) {
+    const sectionText = normalizeText(section.textContent || "");
+    if (sectionText === headingText && section.parentElement) {
+      section = section.parentElement;
+    }
+  }
   return normalizeText(section?.textContent || "");
 }
 
 export function extractDetailFromSlider(slider) {
   if (!slider) return null;
-  const detailRoot =
-    slider.querySelector(".job-details-content") ||
-    slider.querySelector(".air3-slider-content") ||
-    slider.querySelector(".air3-slider-body") ||
-    slider;
+  const detailRoot = resolveDetailRoot(slider);
   const titleFromDetail = normalizeText(
     detailRoot.querySelector("h1, h2, h3, [data-test*='title']")?.textContent || ""
   );
@@ -262,5 +285,44 @@ export function extractDetailFromSlider(slider) {
     attachments_present: attachments,
     required_skills_detail_raw: skills || null,
     client_history_detail_raw: client || null,
+  };
+}
+
+export function extractDetailMetaFromSlider(slider) {
+  if (!slider) return {};
+  const detailRoot = resolveDetailRoot(slider);
+  const text = normalizeText(detailRoot?.textContent || "");
+  const proposals = findFirstMatch(text, /Proposals[^.]*?(?=$|[.!])/i);
+  const postedMatch = text.match(
+    /Posted\s+([0-9]+\s+(?:minute|hour|day|week|month|year)s?\s+ago|yesterday)/i
+  );
+  const posted = postedMatch ? postedMatch[1] : null;
+
+  const range = findFirstMatch(
+    text,
+    /\$[0-9][0-9,]*(?:\.[0-9]+)?\s*-\s*\$[0-9][0-9,]*(?:\.[0-9]+)?/i
+  );
+  const budgetLabel = findFirstMatch(
+    text,
+    /Budget\s*[:：]?\s*\$[0-9][0-9,]*(?:\.[0-9]+)?/i
+  );
+  const hourly = findFirstMatch(
+    text,
+    /\$[0-9][0-9,]*(?:\.[0-9]+)?\s*\/\s*hr/i
+  );
+  let budget = null;
+  if (range) budget = range;
+  else if (budgetLabel) budget = budgetLabel.replace(/Budget\s*[:：]?\s*/i, "");
+  else if (hourly) budget = hourly.replace(/\s*\/\s*hr/i, "");
+
+  let jobType = null;
+  if (/\bHourly\b/i.test(text)) jobType = "Hourly";
+  else if (/\bFixed-price\b/i.test(text)) jobType = "Fixed-price";
+
+  return {
+    posted_time_raw: posted || null,
+    budget_or_hourly_range_raw: budget || null,
+    proposal_count_raw: proposals || null,
+    job_type: jobType || null,
   };
 }

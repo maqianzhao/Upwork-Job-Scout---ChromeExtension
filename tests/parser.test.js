@@ -5,6 +5,7 @@ import {
   buildJobKey,
   extractListItemsFromDocument,
   extractDetailFromSlider,
+  extractDetailMetaFromSlider,
 } from "../extension/src/core/parser.js";
 
 describe("parser", () => {
@@ -141,6 +142,39 @@ describe("parser", () => {
     const slider = dom.window.document.querySelector(".air3-slider-job-details");
     const detail = extractDetailFromSlider(slider);
     expect(detail.description_full).toContain("real job description");
+  });
+
+  it("extracts meta fields from detail text", () => {
+    const html = `
+      <div class="air3-slider air3-slider-job-details" data-test="air3-slider">
+        <div>Posted 34 minutes ago</div>
+        <div>Hourly</div>
+        <div>$10.00-$30.00</div>
+        <div>Proposals: Less than 5</div>
+      </div>
+    `;
+    const dom = new JSDOM(html);
+    const slider = dom.window.document.querySelector(".air3-slider-job-details");
+    const meta = extractDetailMetaFromSlider(slider);
+    expect(meta.posted_time_raw).toBe("34 minutes ago");
+    expect(meta.job_type).toBe("Hourly");
+    expect(meta.budget_or_hourly_range_raw).toBe("$10.00-$30.00");
+    expect(meta.proposal_count_raw).toContain("Proposals");
+  });
+
+  it("extracts client history from non-heading node", () => {
+    const html = `
+      <div class="air3-slider air3-slider-job-details">
+        <section>
+          <div>About the client</div>
+          <div>Payment method verified</div>
+        </section>
+      </div>
+    `;
+    const dom = new JSDOM(html);
+    const slider = dom.window.document.querySelector(".air3-slider-job-details");
+    const detail = extractDetailFromSlider(slider);
+    expect(detail.client_history_detail_raw).toContain("Payment method verified");
   });
 
   it("falls back to card extraction without details links", () => {
