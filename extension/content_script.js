@@ -607,9 +607,17 @@
 
   function openDetailWithStrategy(strategy, record, index) {
     if (strategy === "DETAILS_URL_PUSHSTATE") {
+      if (record.job_url && navRef?.hasModalInfoParam?.(record.job_url)) {
+        if (record.job_url) {
+          history.pushState({}, "", record.job_url);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+          return { ok: true, strategy };
+        }
+        return { ok: false, strategy };
+      }
       if (record.job_id && navRef?.buildDetailsUrl) {
         const detailsUrl = navRef.buildDetailsUrl(location.origin, record.job_id);
-        if (detailsUrl) {
+        if (detailsUrl && navRef?.hasModalInfoParam?.(detailsUrl)) {
           history.pushState({}, "", detailsUrl);
           window.dispatchEvent(new PopStateEvent("popstate"));
           return { ok: true, strategy };
