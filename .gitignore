@@ -13,3 +13,4 @@ docs/probes/run_*.md
 docs/probes/run_*.md:Zone.Identifier
 docs/probes/run_*.log.json
 docs/probes/run_*.log.json:Zone.Identifier
+/.worktrees/
