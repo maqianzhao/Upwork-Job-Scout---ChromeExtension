@@ -209,6 +209,22 @@ describe("parser", () => {
     expect(items[0].job_key.startsWith("card_")).toBe(true);
   });
 
+  it("prefers details links when both jobs and details exist", () => {
+    const html = `
+      <article data-test="job">
+        <a href="/jobs/Backend_~02">Backend Engineer</a>
+        <a href="/nx/find-work/best-matches/details/~02">Backend Engineer</a>
+        <div>Hourly</div>
+        <div>Proposals: 5 to 10</div>
+      </article>
+    `;
+    const dom = new JSDOM(html, { url: "https://www.upwork.com/nx/find-work/best-matches" });
+    const items = extractListItemsFromDocument(dom.window.document);
+    expect(items.length).toBe(1);
+    expect(items[0].job_id).toBe("~02");
+    expect(items[0].job_url).toContain("/details/");
+  });
+
   it("dedupes nested fallback cards for the same job link", () => {
     const html = `
       <div class="feeds-card">

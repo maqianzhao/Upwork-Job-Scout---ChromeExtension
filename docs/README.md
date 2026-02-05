@@ -35,3 +35,6 @@
 - “About the client” 支持非标题元素文本识别。
 - 详情打开策略只点击 `/details/` 链接，避免跳转 `/jobs/` 独立详情页。
 - 当列表仅解析出 `job_id` 时，直接构造 `/details/` URL 打开滑窗，避免跳出 Best matches。
+- 若检测到跳转 `/jobs/`，将停止本次 run 并记录 `DETAIL_NAVIGATED_AWAY`，提示返回 Best matches 再重试。
+- 支持动态判断当前页面是否为 Best matches，离开页面将显示 Not supported。
+- 列表解析优先使用 `/details/` 链接，避免 `job_url` 退化为 `/jobs`。

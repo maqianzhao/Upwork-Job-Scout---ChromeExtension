@@ -89,7 +89,8 @@ export function createOverlay({
   }
 
   function updateView(state) {
-    supportEl.textContent = isSupported ? "Supported" : "Not supported";
+    const supported = typeof isSupported === "function" ? isSupported() : isSupported;
+    supportEl.textContent = supported ? "Supported" : "Not supported";
     setStatusDot(state.status);
     statusEl.textContent = `Status: ${state.status || "IDLE"} | Phase: ${
       state.phase || "-"
@@ -101,7 +102,8 @@ export function createOverlay({
     }`;
     errorEl.textContent = state.last_error || "";
 
-    startBtn.disabled = !isSupported || ["RUNNING_LIST", "RUNNING_DETAIL", "STOPPING"].includes(state.status);
+    startBtn.disabled =
+      !supported || ["RUNNING_LIST", "RUNNING_DETAIL", "STOPPING"].includes(state.status);
     clearHistoryBtn.disabled = ["RUNNING_LIST", "RUNNING_DETAIL", "STOPPING"].includes(state.status);
     startBtn.textContent = state.status === "PAUSED_AUTH" ? "Start (New Run)" : "Start";
   }

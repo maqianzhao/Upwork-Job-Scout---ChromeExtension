@@ -10,7 +10,10 @@
   const sendMessage = (msg) =>
     new Promise((resolve) => chrome.runtime.sendMessage(msg, resolve));
 
-  const isSupported = location.pathname.startsWith("/nx/find-work/best-matches");
+  const isSupported = () =>
+    navRef
+      ? navRef.isBestMatchesPath(location.pathname)
+      : location.pathname.startsWith("/nx/find-work/best-matches");
 
   const state = {
     status: "IDLE",
@@ -30,6 +33,7 @@
   let storageKeysRef = null;
   let logRef = null;
   let parserRef = null;
+  let navRef = null;
 
   async function init() {
     let overlayModule;
@@ -39,12 +43,14 @@
       console.error("[UJSC] overlay import failed", err);
       throw err;
     }
-    const [{ createOverlay }, parser, selectors, storageKeys, logUtils] = await Promise.all([
+    const [{ createOverlay }, parser, selectors, storageKeys, logUtils, navigation] =
+      await Promise.all([
       Promise.resolve(overlayModule),
       import(chrome.runtime.getURL("src/core/parser.js")),
       import(chrome.runtime.getURL("src/core/selectors.js")),
       import(chrome.runtime.getURL("src/core/storage.js")),
       import(chrome.runtime.getURL("src/core/log.js")),
+      import(chrome.runtime.getURL("src/core/navigation.js")),
     ]);
 
     injectCss();
@@ -52,6 +58,7 @@
     storageKeysRef = storageKeys;
     logRef = logUtils;
     parserRef = parser;
+    navRef = navigation;
     overlayApi = createOverlay({
       onStart: (maxItems) => startRun(maxItems, parser, selectors, storageKeys),
       onStop: () => requestStop(),
@@ -146,7 +153,7 @@
   }
 
   async function startRun(maxItems, parser, selectors, storageKeys) {
-    if (!isSupported) return;
+    if (!isSupported()) return;
     if (state.status === "RUNNING_LIST" || state.status === "RUNNING_DETAIL") return;
 
     state.max_items = maxItems || 30;
@@ -365,6 +372,19 @@
         () => openDetailForRecord(record, i)
       );
       if (!slider) {
+        if (!isSupported() && location.pathname.includes("/jobs/")) {
+          state.last_error = "已跳转到 /jobs 页面，无法在 Best matches 内打开详情";
+          await recordError(storageKeys, {
+            error_code: "DETAIL_NAVIGATED_AWAY",
+            error_message_en: "Navigated away to /jobs page while opening details",
+            error_message_zh: "打开详情时跳转到 /jobs 页面",
+            step: "DETAIL_OPEN",
+            url: location.href,
+            selector_hint: JSON.stringify({ strategy: "NAV_AWAY", field: "url" }),
+            job_key: record.job_key,
+          });
+          return finishRun("STOPPED", storageKeys, "DETAIL_NAVIGATED_AWAY");
+        }
         await recordError(storageKeys, {
           error_code: "DETAIL_READY_TIMEOUT_10S",
           error_message_en: `Detail slider not ready via ${openMethod.strategy}`,
@@ -474,7 +494,16 @@
     if (!target) return false;
     const candidates = Array.from(
       document.querySelectorAll(
-        '[data-test*="job"], [class*="job-tile"], article, li[data-test*="job"], div[data-ev-label*="job"]'
+        [
+          '[data-test*="job"]',
+          '[data-test*="job-tile"]',
+          '[data-test*="job-card"]',
+          '[class*="job-tile"]',
+          "article",
+          "section",
+          "li[data-test*=\"job\"]",
+          'div[data-ev-label*="job"]',
+        ].join(", ")
       )
     );
     for (const el of candidates) {
@@ -484,7 +513,11 @@
       ).toLowerCase();
       if (!text) continue;
       if (text.includes(target) || target.includes(text)) {
-        safeClick(el);
+        const link =
+          el.querySelector('a[href*="/details/"]') ||
+          el.querySelector('a[href*="/jobs/"]') ||
+          el.querySelector("a");
+        safeClick(link || el);
         return true;
       }
     }
@@ -512,14 +545,6 @@
         safeClick(byId);
         return { ok: true, strategy: "JOB_ID_LINK" };
       }
-
-      const detailsPath = parserRef.buildDetailsPath(record.job_id);
-      if (detailsPath && location.origin) {
-        const detailsUrl = new URL(detailsPath, location.origin);
-        detailsUrl.searchParams.set("pageTitle", "Job Details");
-        location.href = detailsUrl.toString();
-        return { ok: true, strategy: "DETAILS_URL" };
-      }
     }
 
     if (clickCardByTitle(record.title)) {
@@ -531,6 +556,15 @@
       return { ok: true, strategy: "INDEX_CARD" };
     }
 
+    if (record.job_id && navRef?.buildDetailsUrl) {
+      const detailsUrl = navRef.buildDetailsUrl(location.origin, record.job_id);
+      if (detailsUrl) {
+        history.pushState({}, "", detailsUrl);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+        return { ok: true, strategy: "DETAILS_URL_PUSHSTATE" };
+      }
+    }
+
     return { ok: false, strategy: "NONE" };
   }
 
@@ -538,11 +572,25 @@
     if (typeof index !== "number" || index < 0) return false;
     const candidates = Array.from(
       document.querySelectorAll(
-        '[data-test*="job"], [class*="job-tile"], article, li[data-test*="job"], div[data-ev-label*="job"]'
+        [
+          '[data-test*="job"]',
+          '[data-test*="job-tile"]',
+          '[data-test*="job-card"]',
+          '[class*="job-tile"]',
+          "article",
+          "section",
+          "li[data-test*=\"job\"]",
+          'div[data-ev-label*="job"]',
+        ].join(", ")
       )
     ).filter((el) => !isInsideOpenedSlider(el));
     if (index >= candidates.length) return false;
-    safeClick(candidates[index]);
+    const el = candidates[index];
+    const link =
+      el.querySelector('a[href*="/details/"]') ||
+      el.querySelector('a[href*="/jobs/"]') ||
+      el.querySelector("a");
+    safeClick(link || el);
     return true;
   }
 

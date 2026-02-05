@@ -150,8 +150,8 @@ function extractCardsFallback(doc) {
 
     if (title.toLowerCase() === "featured job posts") continue;
     const link =
-      container.querySelector('a[href*="/jobs/"]') ||
       container.querySelector('a[href*="/details/"]') ||
+      container.querySelector('a[href*="/jobs/"]') ||
       container.querySelector("h1 a, h2 a, h3 a, h4 a, a");
     const href = link?.getAttribute("href") || null;
     const jobUrl = href ? new URL(href, doc.baseURI).toString() : null;
@@ -190,10 +190,10 @@ function extractCardsFallback(doc) {
 }
 
 export function extractListItemsFromDocument(doc) {
-  const anchorsA1 = Array.from(doc.querySelectorAll('a[href*="/jobs/"]'));
-  const anchorsA2 = Array.from(
+  const anchorsA1 = Array.from(
     doc.querySelectorAll('a[href*="/nx/find-work/best-matches/details/"], a[href*="/details/"]')
   );
+  const anchorsA2 = Array.from(doc.querySelectorAll('a[href*="/jobs/"]'));
   const anchors = anchorsA1.length > 0 ? anchorsA1 : anchorsA2;
 
   const items = [];

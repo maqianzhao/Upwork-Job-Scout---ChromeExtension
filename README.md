@@ -58,5 +58,8 @@ npm test
 - “About the client” 标题不再要求 h 标签，支持普通 div 文本
 - 点击详情优先走 `/details/` 链接，避免误点 `/jobs/` 导航到独立详情页
 - 当仅有 `job_id` 时，直接构造 `/details/` URL 打开右侧滑窗，避免跳转到 `/jobs`
+- 如果运行中检测到跳转 `/jobs/`，会停止并记录 `DETAIL_NAVIGATED_AWAY`，请返回 Best matches 再重新 Start
+- 支持动态识别当前是否为 Best matches 页面，离开时显示 Not supported
+- 列表提取优先使用 `/details/` 链接，避免 `job_url` 退化为 `/jobs`
 
 详细规范请查看：`PRD-browser-extension-v0.4.md`
