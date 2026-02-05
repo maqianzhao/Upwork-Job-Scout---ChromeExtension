@@ -7,6 +7,7 @@ import {
   buildDetailsUrl,
   buildBestMatchesUrl,
   getDetailOpenStrategyOrder,
+  hasModalInfoParam,
   normalizeOrigin,
 } from "../extension/src/core/navigation.js";
 
@@ -71,5 +72,14 @@ describe("navigation", () => {
       "TITLE_CARD",
       "INDEX_CARD",
     ]);
+  });
+
+  it("detects modalInfo param in url", () => {
+    const withInfo =
+      "https://www.upwork.com/nx/find-work/best-matches/details/~02?pageTitle=Job%20Details&_modalInfo=%5B%7B%22navType%22%3A%22slider%22%7D%5D";
+    const withoutInfo =
+      "https://www.upwork.com/nx/find-work/best-matches/details/~02?pageTitle=Job%20Details";
+    expect(hasModalInfoParam(withInfo)).toBe(true);
+    expect(hasModalInfoParam(withoutInfo)).toBe(false);
   });
 });

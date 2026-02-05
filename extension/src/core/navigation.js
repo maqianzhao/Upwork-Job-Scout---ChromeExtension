@@ -29,6 +29,11 @@ export function getDetailOpenStrategyOrder() {
   ];
 }
 
+export function hasModalInfoParam(url) {
+  if (!url || typeof url !== "string") return false;
+  return url.includes("_modalInfo=");
+}
+
 export function normalizeOrigin(origin) {
   if (!origin || typeof origin !== "string") return null;
   try {
