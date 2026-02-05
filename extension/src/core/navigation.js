@@ -4,11 +4,13 @@ export function isBestMatchesPath(pathname) {
 }
 
 export function isDetailsPath(pathname) {
-  return pathname?.includes("/details/");
+  if (!pathname || typeof pathname !== "string") return false;
+  return pathname.includes("/details/");
 }
 
 export function isJobsPath(pathname) {
-  return pathname?.includes("/jobs/");
+  if (!pathname || typeof pathname !== "string") return false;
+  return pathname.startsWith("/jobs/");
 }
 
 export function getDetailMode(pathname) {

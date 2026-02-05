@@ -51,6 +51,7 @@ describe("navigation", () => {
     expect(isDetailsPath("/jobs/Backend_~02/")).toBe(false);
     expect(isJobsPath("/jobs/Backend_~02/")).toBe(true);
     expect(isJobsPath("/nx/find-work/best-matches/details/~02")).toBe(false);
+    expect(isJobsPath("/nx/search/jobs/saved/")).toBe(false);
   });
 
   it("returns detail mode for path", () => {
@@ -59,6 +60,7 @@ describe("navigation", () => {
     );
     expect(getDetailMode("/jobs/Backend_~02/")).toBe("jobs");
     expect(getDetailMode("/nx/find-work/best-matches")).toBe(null);
+    expect(getDetailMode("/nx/search/jobs/saved/")).toBe(null);
   });
 
   it("returns detail open strategy order", () => {
