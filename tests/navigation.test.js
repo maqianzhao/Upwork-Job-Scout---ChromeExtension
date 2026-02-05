@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isBestMatchesPath, buildDetailsUrl } from "../extension/src/core/navigation.js";
+import { isBestMatchesPath, buildDetailsUrl, normalizeOrigin } from "../extension/src/core/navigation.js";
 
 describe("navigation", () => {
   it("detects best matches paths", () => {
@@ -13,7 +13,17 @@ describe("navigation", () => {
     expect(buildDetailsUrl("https://www.upwork.com", "~02")).toBe(
       "https://www.upwork.com/nx/find-work/best-matches/details/~02?pageTitle=Job+Details"
     );
+    expect(buildDetailsUrl("http://upwork.com", "~02")).toBe(
+      "https://www.upwork.com/nx/find-work/best-matches/details/~02?pageTitle=Job+Details"
+    );
     expect(buildDetailsUrl("https://www.upwork.com", null)).toBe(null);
     expect(buildDetailsUrl("", "~02")).toBe(null);
+  });
+
+  it("normalizes origin to https www", () => {
+    expect(normalizeOrigin("http://upwork.com")).toBe("https://www.upwork.com");
+    expect(normalizeOrigin("https://upwork.com")).toBe("https://www.upwork.com");
+    expect(normalizeOrigin("https://www.upwork.com")).toBe("https://www.upwork.com");
+    expect(normalizeOrigin("not-a-url")).toBe(null);
   });
 });
