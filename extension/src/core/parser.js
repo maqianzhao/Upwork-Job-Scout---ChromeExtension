@@ -26,6 +26,11 @@ export function isJobsHref(href) {
   return value.includes("/jobs/");
 }
 
+export function buildDetailsPath(jobId) {
+  if (!jobId) return null;
+  return `/nx/find-work/best-matches/details/${jobId}`;
+}
+
 export function buildJobKey({ jobId, jobUrl }) {
   if (jobId) return jobId;
   if (jobUrl) return jobUrl;

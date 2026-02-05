@@ -512,6 +512,14 @@
         safeClick(byId);
         return { ok: true, strategy: "JOB_ID_LINK" };
       }
+
+      const detailsPath = parserRef.buildDetailsPath(record.job_id);
+      if (detailsPath && location.origin) {
+        const detailsUrl = new URL(detailsPath, location.origin);
+        detailsUrl.searchParams.set("pageTitle", "Job Details");
+        location.href = detailsUrl.toString();
+        return { ok: true, strategy: "DETAILS_URL" };
+      }
     }
 
     if (clickCardByTitle(record.title)) {

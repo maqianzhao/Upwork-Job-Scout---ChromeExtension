@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Upwork Job Scout",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Best matches list+detail scraper for Upwork (local only).",
   "permissions": ["storage", "downloads", "activeTab", "scripting"],
   "host_permissions": ["https://www.upwork.com/*"],

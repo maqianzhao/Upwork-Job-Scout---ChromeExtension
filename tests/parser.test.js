@@ -8,6 +8,7 @@ import {
   extractDetailMetaFromSlider,
   isDetailsHref,
   isJobsHref,
+  buildDetailsPath,
 } from "../extension/src/core/parser.js";
 
 describe("parser", () => {
@@ -29,6 +30,11 @@ describe("parser", () => {
     expect(isDetailsHref("/jobs/Backend_~02/")).toBe(false);
     expect(isJobsHref("/jobs/Backend_~02/")).toBe(true);
     expect(isJobsHref("/nx/find-work/best-matches/details/~02")).toBe(false);
+  });
+
+  it("builds details path from job id", () => {
+    expect(buildDetailsPath("~02")).toBe("/nx/find-work/best-matches/details/~02");
+    expect(buildDetailsPath(null)).toBe(null);
   });
 
   it("builds job_key preferring job_id", () => {

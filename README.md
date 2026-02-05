@@ -57,5 +57,6 @@ npm test
 - 详情补全 list 字段：当列表为空时，从详情文本中回填 `Budget/Rate`、`Proposals`、`job_type`、`posted_time`
 - “About the client” 标题不再要求 h 标签，支持普通 div 文本
 - 点击详情优先走 `/details/` 链接，避免误点 `/jobs/` 导航到独立详情页
+- 当仅有 `job_id` 时，直接构造 `/details/` URL 打开右侧滑窗，避免跳转到 `/jobs`
 
 详细规范请查看：`PRD-browser-extension-v0.4.md`
