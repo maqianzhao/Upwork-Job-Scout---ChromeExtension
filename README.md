@@ -48,7 +48,7 @@ npm test
 - 已修复 Service Worker 下载兼容问题（不再依赖 `URL.createObjectURL`）
 - `log.json` 现包含事件流（`events`），用于定位每轮 run 的步骤轨迹（开始/Load More/详情打开/结束）
 - 列表提取会跳过已打开详情面板内的链接，避免误把详情链接当作列表项
-- 详情就绪判定增加 URL + 描述长度校验，并在等待期内自动重试点击，减少“1 秒完成但无有效数据”的误判
+- 详情就绪判定：需标题+Summary+About the client+时薪/固定价均就绪，最长等待 30 秒，等待期内自动重试点击
 - 新增对 Upwork `/jobs/..._~jobId` 链接解析，列表项 `job_id` 提取更稳定
 - 详情关闭链路增强：Close/Back/Escape/history.back 多级兜底，避免卡在首条详情导致后续无法点击
 - 列表链接过滤：忽略 `/nx/search/jobs/saved/` 等非职位链接，避免误跳转到收藏页

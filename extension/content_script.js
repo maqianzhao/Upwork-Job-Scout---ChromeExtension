@@ -34,6 +34,7 @@
   let logRef = null;
   let parserRef = null;
   let navRef = null;
+  let lastDetailMissing = null;
 
   async function init() {
     let overlayModule;
@@ -368,7 +369,7 @@
         selectors,
         parser,
         record,
-        10000,
+        30000,
         () => openDetailForRecord(record, i)
       );
       if (!slider) {
@@ -385,10 +386,14 @@
           });
           return finishRun("STOPPED", storageKeys, "DETAIL_NAVIGATED_AWAY");
         }
+        const missing = Array.isArray(lastDetailMissing) ? lastDetailMissing : [];
+        const missingText = missing.length > 0 ? `; missing: ${missing.join(",")}` : "";
         await recordError(storageKeys, {
-          error_code: "DETAIL_READY_TIMEOUT_10S",
-          error_message_en: `Detail slider not ready via ${openMethod.strategy}`,
-          error_message_zh: `详情面板未就绪（打开策略：${openMethod.strategy}）`,
+          error_code: "DETAIL_READY_TIMEOUT_30S",
+          error_message_en: `Detail slider not ready via ${openMethod.strategy}${missingText}`,
+          error_message_zh:
+            `详情面板未就绪（打开策略：${openMethod.strategy}）` +
+            (missing.length > 0 ? `，缺少：${missing.join("、")}` : ""),
           step: "DETAIL_READY",
           url: record.job_url,
           selector_hint: JSON.stringify({
@@ -396,10 +401,11 @@
             field: "slider",
             title: record.title || "",
             source_index: record.source_index ?? i,
+            missing,
           }),
           job_key: record.job_key,
         });
-        return finishRun("STOPPED", storageKeys, "DETAIL_READY_TIMEOUT_10S");
+        return finishRun("STOPPED", storageKeys, "DETAIL_READY_TIMEOUT_30S");
       }
 
       const detail = parser.extractDetailFromSlider(slider);
@@ -651,17 +657,29 @@
       const { container } = selectors.findSliderContainer(document);
       if (container && isDetailUrlReady(record)) {
         const detail = parser.extractDetailFromSlider(container);
-        if (detail?.description_full && detail.description_full.length >= 20) {
+        const meta = parser.extractDetailMetaFromSlider(container);
+        const readiness = parser.evaluateDetailReadiness
+          ? parser.evaluateDetailReadiness(detail, meta)
+          : { ready: Boolean(detail?.description_full), missing: [] };
+        if (readiness.ready) {
+          lastDetailMissing = null;
           return container;
         }
+        lastDetailMissing = readiness.missing;
       }
       if (isDetailUrlReady(record) && location.href.includes("/details/")) {
         const fallback = selectors.findDetailContentContainer(document);
         if (fallback.container) {
           const detail = parser.extractDetailFromSlider(fallback.container);
-          if (detail?.description_full && detail.description_full.length >= 20) {
+          const meta = parser.extractDetailMetaFromSlider(fallback.container);
+          const readiness = parser.evaluateDetailReadiness
+            ? parser.evaluateDetailReadiness(detail, meta)
+            : { ready: Boolean(detail?.description_full), missing: [] };
+          if (readiness.ready) {
+            lastDetailMissing = null;
             return fallback.container;
           }
+          lastDetailMissing = readiness.missing;
         }
       }
       if (typeof retryOpen === "function" && Date.now() - lastRetry >= 1200) {

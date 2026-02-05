@@ -9,6 +9,7 @@ import {
   isDetailsHref,
   isJobsHref,
   buildDetailsPath,
+  evaluateDetailReadiness,
 } from "../extension/src/core/parser.js";
 
 describe("parser", () => {
@@ -41,6 +42,37 @@ describe("parser", () => {
     expect(buildJobKey({ jobId: "~02", jobUrl: "u" })).toBe("~02");
     expect(buildJobKey({ jobId: null, jobUrl: "u" })).toBe("u");
     expect(buildJobKey({ jobId: "", jobUrl: "" })).toBe(null);
+  });
+
+  it("evaluates detail readiness with required fields", () => {
+    const detail = {
+      title_from_detail: "AI Backend Engineer",
+      description_full: "Summary content goes here and is long enough.",
+      client_history_detail_raw: "Payment method verified",
+    };
+    const meta = {
+      job_type: "Hourly",
+      budget_or_hourly_range_raw: "$10-$30",
+    };
+    const result = evaluateDetailReadiness(detail, meta);
+    expect(result.ready).toBe(true);
+    expect(result.missing.length).toBe(0);
+  });
+
+  it("marks detail readiness missing when fields absent", () => {
+    const detail = {
+      title_from_detail: "AI Backend Engineer",
+      description_full: "Summary content goes here and is long enough.",
+      client_history_detail_raw: "",
+    };
+    const meta = {
+      job_type: "Fixed-price",
+      budget_or_hourly_range_raw: "",
+    };
+    const result = evaluateDetailReadiness(detail, meta);
+    expect(result.ready).toBe(false);
+    expect(result.missing).toContain("about_client");
+    expect(result.missing).toContain("rate");
   });
 
   it("extracts list items with minimal fields", () => {

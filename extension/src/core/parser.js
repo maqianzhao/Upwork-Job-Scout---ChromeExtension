@@ -37,6 +37,24 @@ export function buildJobKey({ jobId, jobUrl }) {
   return null;
 }
 
+export function evaluateDetailReadiness(detail, meta) {
+  const missing = [];
+  const title = normalizeText(detail?.title_from_detail || "");
+  const summary = normalizeText(detail?.description_full || "");
+  const about = normalizeText(detail?.client_history_detail_raw || "");
+  const rate = normalizeText(meta?.budget_or_hourly_range_raw || "");
+  const jobType = normalizeText(meta?.job_type || "");
+
+  if (!title) missing.push("title");
+  if (summary.length < 20) missing.push("summary");
+  if (!about) missing.push("about_client");
+  if (!rate || (jobType !== "Hourly" && jobType !== "Fixed-price")) {
+    missing.push("rate");
+  }
+
+  return { ready: missing.length === 0, missing };
+}
+
 function normalizeText(text) {
   if (!text) return "";
   return text.replace(/\s+/g, " ").trim();
